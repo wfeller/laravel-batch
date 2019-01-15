@@ -1,7 +1,7 @@
 {
     "name": "wfeller/laravel-batch",
     "description": "Insert or update models in batch, while still firing model events.",
-    "keywords": ["laravel", "batch"],
+    "keywords": ["laravel", "batch", "queue"],
     "homepage": "https://github.com/wfeller/laravel-batch",
     "license": "MIT",
     "authors": [
@@ -15,7 +15,10 @@
         "laravel/framework": "~5.7.0"
     },
     "require-dev": {
+        "doctrine/dbal": "^2.9",
         "larapack/dd": "^1.0",
+        "opensoft/doctrine-postgres-types": "^1.3",
+        "orchestra/testbench": "3.7.*",
         "phpunit/phpunit": "^7.0"
     },
     "autoload": {
