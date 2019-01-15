@@ -1,27 +1,41 @@
 <?php
 
-namespace Wfeller\Batch;
+namespace WF\Batch;
 
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
-use Wfeller\Batch\Query\PostgresDriver;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
+use WF\Batch\Exceptions\BatchInsertException;
+use WF\Batch\Query\Driver;
+use WF\Batch\Query\GenericDriver;
+use WF\Batch\Query\PostgresDriver;
 
-class BatchInsert
+class BatchInsert implements ShouldQueue
 {
-    /** @var \Illuminate\Database\Connection */
+    use Queueable;
+
     public $connection;
     public $settings;
 
-    protected $items;
-    protected $chunkSize;
-    /** @var string|\Illuminate\Database\Eloquent\Model|\Illuminate\Database\Eloquent\Builder */
-    protected $class;
+    public $items;
+    public $chunkSize;
+    /** @var \Illuminate\Database\Eloquent\Model */
+    public $class;
+
     /** @var \Illuminate\Database\Eloquent\Model */
     protected $model;
-    /** @var \Illuminate\Contracts\Events\Dispatcher|\Illuminate\Events\Dispatcher */
     protected $dispatcher;
-    /** @var \Wfeller\Batch\Query\Driver */
+    /** @var \WF\Batch\Query\Driver */
     protected $query;
+
+    protected static $drivers = [
+        'pgsql' => PostgresDriver::class,
+        'mysql' => GenericDriver::class,
+        'sqlite' => GenericDriver::class,
+    ];
 
     public function __construct(array $items, int $chunkSize, string $class)
     {
@@ -29,34 +43,36 @@ class BatchInsert
         $this->chunkSize = $chunkSize;
         $this->class = $class;
         $this->model = new $class;
+        $this->settings = new Settings($this->model);
         $this->dispatcher = app(Dispatcher::class);
-        $this->settings = [
-            'connection' => $this->model->getConnectionName(),
-            'table' => $this->model->getTable(),
-            'incrementing' => $this->model->getIncrementing(),
-            'keyName' => $this->model->getKeyName(),
-            'keyType' => $this->model->getKeyType(),
-            'usesTimestamps' => $this->model->usesTimestamps(),
-        ];
         $this->connection = $this->model->getConnection();
         $this->setQuery();
     }
 
-    protected function setQuery()
+    public static function registerDriver(string $driver, string $class) : void
     {
-        $driver = $this->connection->getDriverName();
-        switch ($driver) :
-            case 'pgsql':
-                $this->query = new PostgresDriver($this);
-                break;
-            default:
-                throw new \Exception("Database driver $driver does not have a query parser.");
-        endswitch;
+        if (! is_a($class, Driver::class, true)) {
+            throw new BatchInsertException("'$class' does not extend '".Driver::class."'.");
+        }
+        static::$drivers[$driver] = $class;
     }
 
-    public function run() : array
+    protected function setQuery() : void
     {
-        $now = now();
+        $driver = $this->connection->getDriverName();
+
+        if (isset(static::$drivers[$driver])) {
+            $class = static::$drivers[$driver];
+            $this->query = new $class($this);
+            return;
+        }
+
+        throw new BatchInsertException("Database driver '$driver'' does not have a query parser.");
+    }
+
+    public function handle() : array
+    {
+        $now = Carbon::now();
         $ids = [];
         $eventTypes = $this->eventTypes();
         foreach (array_chunk($this->items, $this->chunkSize) as $modelsChunk) {
@@ -73,7 +89,7 @@ class BatchInsert
                         continue;
                     }
                 }
-                if ($this->settings['usesTimestamps']) {
+                if ($this->settings->usesTimestamps) {
                     if (! $model->exists) {
                         $model->setCreatedAt($now);
                     }
@@ -118,37 +134,35 @@ class BatchInsert
         $id = null;
         $values = [];
         foreach ($items as $item) {
-            if ($id = array_get($item, $this->settings['keyName'], false)) {
+            if ($id = Arr::get($item, $this->settings->keyName, false)) {
                 $ids[] = $id;
             }
             $values[count($item)][] = $item;
         }
         foreach ($values as $insert) {
-            $this->class::insert($insert);
+            $this->class::query()->insert($insert);
         }
         return $ids;
     }
 
     protected function batchUpdate(array $items) : array
     {
-        foreach ($this->getColumns() as $column) {
+        foreach ($this->settings->columns as $column) {
             $updated = array_filter($items, function ($arr) use ($column) {
                 return array_key_exists($column, $arr);
             });
             if (count($updated) === 0) {
                 continue;
             }
+            $ids = [];
             $values = [];
-            $stringValues = [];
             foreach ($updated as $item) {
-                $values[] = $item[$this->settings['keyName']];
+                $ids[] = $item[$this->settings->keyName];
                 $values[] = $item[$column];
-                $stringValues[] = '(?, ?)';
             }
-            $stringValues = implode(', ', $stringValues);
-            $this->connection->update($this->query->rawUpdate($column, $stringValues), $values);
+            $this->query->performUpdate($column, $values, $ids);
         }
-        return array_pluck($items, $this->settings['keyName']);
+        return Arr::pluck($items, $this->settings->keyName);
     }
 
     protected function eventTypes() : array
@@ -164,18 +178,5 @@ class BatchInsert
     {
         $method = $halt ? 'until' : 'dispatch';
         return $this->dispatcher->{$method}("eloquent.{$event}: {$this->class}", $model);
-    }
-
-    protected function getColumns() : array
-    {
-        if (isset($this->settings['columns'])) {
-            return $this->settings['columns'];
-        }
-        return $this->settings['columns'] = array_filter(
-            $this->connection->getSchemaBuilder()->getColumnListing($this->settings['table']),
-            function ($value) {
-                return $value !== $this->settings['keyName'];
-            }
-        );
     }
 }

@@ -20,12 +20,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Wfeller\\Batch\\": "src"
+            "WF\\Batch\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Wfeller\\Batch\\Tests\\": "tests"
+            "WF\\Batch\\Tests\\": "tests"
         }
     },
     "scripts": {

@@ -22,7 +22,7 @@ Just add this trait to your models:
 ``` php
 class Car extends \Illuminate\Database\Eloquent\Model
 {
-    use \Wfeller\Batch\Traits\Batchable;
+    use \WF\Batch\Traits\Batchable;
     
     // ...
 }

@@ -1,12 +1,11 @@
 <?php
 
-namespace Wfeller\Batch\Query;
+namespace WF\Batch\Query;
 
-use Wfeller\Batch\BatchInsert;
+use WF\Batch\BatchInsert;
 
 abstract class Driver
 {
-    /** @var \Wfeller\Batch\BatchInsert */
     protected $insert;
 
     public function __construct(BatchInsert $insert)
@@ -14,5 +13,14 @@ abstract class Driver
         $this->insert = $insert;
     }
 
-    abstract public function rawUpdate(string $column, string $stringValues) : string;
+    public function performUpdate(string $column, array $values, array $ids) : void
+    {
+        $this->insert->connection->update(
+            $this->sql($column, $values, $ids),
+            $this->bindings($column, $values, $ids)
+        );
+    }
+
+    abstract protected function sql(string $column, array $values, array $ids) : string;
+    abstract protected function bindings(string $column, array $values, array $ids) : array;
 }

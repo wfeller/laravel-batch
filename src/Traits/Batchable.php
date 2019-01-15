@@ -1,8 +1,8 @@
 <?php
 
-namespace Wfeller\Batch\Traits;
+namespace WF\Batch\Traits;
 
-use Wfeller\Batch\BatchInsert;
+use WF\Batch\BatchInsert;
 
 trait Batchable
 {
@@ -13,7 +13,11 @@ trait Batchable
      */
     public static function batchSave(array $models, int $chunkSize = 250) : array
     {
-        $insert = new BatchInsert($models, $chunkSize, static::class);
-        return $insert->run();
+        return (new BatchInsert($models, $chunkSize, static::class))->handle();
+    }
+
+    public static function batchSaveQueue(array $models, int $chunkSize = 250, string $queue = null) : void
+    {
+        dispatch(new BatchInsert($models, $chunkSize, static::class))->onQueue($queue);
     }
 }
