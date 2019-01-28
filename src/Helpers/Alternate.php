@@ -26,13 +26,13 @@ class Alternate
             $allReversed[] = $array;
         }
         $final = [];
-        array_map(function ($value) use (&$allReversed, &$final) {
-            foreach ($allReversed as $key => $array) {
+
+        foreach (array_reverse($first) as $value) {
+            foreach ($allReversed as &$array) {
                 $final[] = array_pop($array);
-                $allReversed[$key] = $array;
             }
             $final[] = $value;
-        }, array_reverse($first));
+        }
         return array_reverse($final);
     }
 }
