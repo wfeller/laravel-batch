@@ -40,7 +40,7 @@ $carIds = Car::batchSave([
 For the updates, there will be one DB query per updated column. For the saves, there will
 only be one query.
 
-##### Why have I made this package?
+### Why have I made this package?
 
 I needed to import models from an excel file, and I happened to have about 10 000 models
 to import (mix of saves and updates).
@@ -51,7 +51,7 @@ it wasn't calling model events, so that wasn't a solution for my needs.
 For the updating part, well... correct me if I'm wrong but I don't think Laravel allows
 updating multiple models at once easily if they all have different data ^^'
 
-##### Some kind of benchmarks
+### Some kind of benchmarks
 
 **These benchmarks are not accurate, but they give some kind of rough idea of the potential performance improvement or usefulness of this package.**
 
