@@ -15,7 +15,7 @@ abstract class Driver
 
     public function performUpdate(string $column, array $values, array $ids) : void
     {
-        $this->insert->connection->update(
+        $this->insert->dbConnection->update(
             $this->sql($column, $values, $ids),
             $this->bindings($column, $values, $ids)
         );

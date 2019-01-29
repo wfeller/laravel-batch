@@ -26,7 +26,7 @@ class PostgresDriver extends Driver
 
     protected function initializeRareType() : void
     {
-        $platform = $this->insert->connection->getDoctrineConnection()->getDatabasePlatform();
+        $platform = $this->insert->dbConnection->getDoctrineConnection()->getDatabasePlatform();
         $platform->registerDoctrineTypeMapping('macaddr', 'macaddr');
         $platform->registerDoctrineTypeMapping('inet', 'inet');
     }
@@ -70,7 +70,7 @@ class PostgresDriver extends Driver
     {
         if (! isset(static::$castTypes[$this->insert->settings->table][$column])) {
             static::$castTypes[$this->insert->settings->table][$column] = $this->castType(
-                $this->insert->connection
+                $this->insert->dbConnection
                              ->getSchemaBuilder()
                              ->getColumnType($this->insert->settings->table, $column)
             );

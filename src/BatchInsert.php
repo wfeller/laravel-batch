@@ -17,7 +17,7 @@ class BatchInsert implements ShouldQueue
 {
     use Queueable;
 
-    public $connection;
+    public $dbConnection;
     public $settings;
 
     public $items;
@@ -45,7 +45,7 @@ class BatchInsert implements ShouldQueue
         $this->model = new $class;
         $this->settings = new Settings($this->model);
         $this->dispatcher = app(Dispatcher::class);
-        $this->connection = $this->model->getConnection();
+        $this->dbConnection = $this->model->getConnection();
         $this->setQuery();
     }
 
