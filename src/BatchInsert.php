@@ -131,7 +131,6 @@ class BatchInsert implements ShouldQueue
     protected function batchInsert(array $items) : array
     {
         $ids = [];
-        $id = null;
         $values = [];
         foreach ($items as $item) {
             if ($id = Arr::get($item, $this->settings->keyName, false)) {
