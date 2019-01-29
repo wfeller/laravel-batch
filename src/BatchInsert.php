@@ -31,6 +31,9 @@ class BatchInsert implements ShouldQueue
     /** @var \WF\Batch\Query\Driver */
     protected $query;
 
+    protected $eventTypes;
+    protected $now;
+
     protected static $drivers = [
         'pgsql' => PostgresDriver::class,
         'mysql' => GenericDriver::class,
@@ -47,6 +50,8 @@ class BatchInsert implements ShouldQueue
         $this->dispatcher = app(Dispatcher::class);
         $this->dbConnection = $this->model->getConnection();
         $this->setQuery();
+        $this->now = Carbon::now();
+        $this->eventTypes = $this->eventTypes();
     }
 
     public static function registerDriver(string $driver, string $class) : void
@@ -57,73 +62,15 @@ class BatchInsert implements ShouldQueue
         static::$drivers[$driver] = $class;
     }
 
-    protected function setQuery() : void
-    {
-        $driver = $this->connection->getDriverName();
-
-        if (isset(static::$drivers[$driver])) {
-            $class = static::$drivers[$driver];
-            $this->query = new $class($this);
-            return;
-        }
-
-        throw new BatchInsertException("Database driver '$driver'' does not have a query parser.");
-    }
-
     public function handle() : array
     {
-        $now = Carbon::now();
         $ids = [];
-        $eventTypes = $this->eventTypes();
         foreach (array_chunk($this->items, $this->chunkSize) as $modelsChunk) {
-            $createModels = [];
-            $updateModels = [];
-            $finalModels = [];
-            foreach ($modelsChunk as $model) {
-                if (! $model instanceof Model) {
-                    $model = (new $this->class)->forceFill($model);
-                }
-                /** @var \Illuminate\Database\Eloquent\Model $model */
-                if ($eventTypes['saving'] && method_exists($model, 'fireModelEvent')) {
-                    if ($this->fireModelEvent($model, 'saving', true) === false) {
-                        continue;
-                    }
-                }
-                if ($this->settings->usesTimestamps) {
-                    if (! $model->exists) {
-                        $model->setCreatedAt($now);
-                    }
-                    $model->setUpdatedAt($now);
-                }
-                if ($model->exists) {
-                    if ($eventTypes['updating']) {
-                        if ($this->fireModelEvent($model, 'updating', true) === false) {
-                            continue;
-                        }
-                    }
-                    $updateModels[] = $model->getDirty() + [$model->getKeyName() => $model->getKey()];
-                } else {
-                    if ($eventTypes['creating']) {
-                        if ($this->fireModelEvent($model, 'creating', true) === false) {
-                            continue;
-                        }
-                    }
-                    $model->wasRecentlyCreated = true;
-                    $createModels[] = $model->getAttributes();
-                }
-                $finalModels[] = $model;
-            }
+            list($createModels, $updateModels, $finalModels) = $this->prepareBatches($modelsChunk);
+
             $ids = array_merge($ids, $this->batchInsert($createModels), $this->batchUpdate($updateModels));
-            foreach ($finalModels as $model) {
-                if ($model->wasRecentlyCreated && $eventTypes['created']) {
-                    $this->fireModelEvent($model, 'created', false);
-                } elseif ($eventTypes['updated']) {
-                    $this->fireModelEvent($model, 'updated', false);
-                }
-                if ($eventTypes['saved']) {
-                    $this->fireModelEvent($model, 'saved', false);
-                }
-            }
+
+            $this->firePostInsertEvents($finalModels);
         }
         return $ids;
     }
@@ -144,31 +91,108 @@ class BatchInsert implements ShouldQueue
         return $ids;
     }
 
-    protected function batchUpdate(array $items) : array
+    protected function batchUpdate(array $models) : array
     {
         foreach ($this->settings->columns as $column) {
-            $updated = array_filter($items, function ($arr) use ($column) {
-                return array_key_exists($column, $arr);
+            $updated = array_filter($models, function ($model) use ($column) {
+                return array_key_exists($column, $model);
             });
-            if (count($updated) === 0) {
+            if (empty($updated)) {
                 continue;
             }
-            $ids = [];
-            $values = [];
-            foreach ($updated as $item) {
-                $ids[] = $item[$this->settings->keyName];
-                $values[] = $item[$column];
-            }
-            $this->query->performUpdate($column, $values, $ids);
+            $this->query->performUpdate($column, ...$this->pullUpdateValues($updated, $column));
         }
-        return Arr::pluck($items, $this->settings->keyName);
+        return Arr::pluck($models, $this->settings->keyName);
+    }
+
+    protected function pullUpdateValues(array $updated, string $column) : array
+    {
+        $ids = [];
+        $values = [];
+        foreach ($updated as $item) {
+            $ids[] = $item[$this->settings->keyName];
+            $values[] = $item[$column];
+        }
+        return [$values, $ids];
+    }
+
+    protected function prepareBatches(array $modelsChunk) : array
+    {
+        list($createModels, $updateModels, $finalModels) = [[], [], []];
+        foreach ($modelsChunk as $model) {
+            $model = $this->prepareModel($model);
+
+            if (! $this->firePreInsertModelEvents($model)) {
+                continue;
+            }
+
+            if ($model->exists) {
+                $updateModels[] = $model->getDirty() + [$this->settings->keyName => $model->getKey()];
+            } else {
+                $model->wasRecentlyCreated = true;
+                $createModels[] = $model->getAttributes();
+            }
+
+            $finalModels[] = $model;
+        }
+        return [$createModels, $updateModels, $finalModels];
+    }
+
+    protected function prepareModel($model) : Model
+    {
+        if (! $model instanceof Model) {
+            $model = (new $this->class)->forceFill($model);
+        }
+        if ($this->settings->usesTimestamps) {
+            if (! $model->exists) {
+                $model->setCreatedAt($this->now);
+            }
+            $model->setUpdatedAt($this->now);
+        }
+        return $model;
+    }
+
+    protected function firePreInsertModelEvents(Model $model) : bool
+    {
+        if ($this->eventTypes['saving']
+            && $this->fireModelEvent($model, 'saving', true) === false
+        ) {
+            return false;
+        }
+
+        if ($model->exists
+            && $this->eventTypes['updating']
+            && $this->fireModelEvent($model, 'updating', true) === false
+        ) {
+            return false;
+        } elseif ($this->eventTypes['creating']
+            && $this->fireModelEvent($model, 'creating', true) === false
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function firePostInsertEvents(array $finalModels) : void
+    {
+        foreach ($finalModels as $model) {
+            if ($model->wasRecentlyCreated && $this->eventTypes['created']) {
+                $this->fireModelEvent($model, 'created', false);
+            } elseif ($this->eventTypes['updated']) {
+                $this->fireModelEvent($model, 'updated', false);
+            }
+            if ($this->eventTypes['saved']) {
+                $this->fireModelEvent($model, 'saved', false);
+            }
+        }
     }
 
     protected function eventTypes() : array
     {
         $types = [];
         foreach (['saving', 'creating', 'updating', 'saved', 'created', 'updated'] as $type) {
-            $types[$type] = count($this->dispatcher->getListeners("eloquent.{$type}: ".$this->class)) > 0;
+            $types[$type] = count($this->dispatcher->getListeners("eloquent.{$type}: {$this->class}")) > 0;
         }
         return $types;
     }
@@ -177,5 +201,18 @@ class BatchInsert implements ShouldQueue
     {
         $method = $halt ? 'until' : 'dispatch';
         return $this->dispatcher->{$method}("eloquent.{$event}: {$this->class}", $model);
+    }
+
+    protected function setQuery() : void
+    {
+        $driver = $this->dbConnection->getDriverName();
+
+        if (isset(static::$drivers[$driver])) {
+            $class = static::$drivers[$driver];
+            $this->query = new $class($this);
+            return;
+        }
+
+        throw new BatchInsertException("Database driver '$driver' does not have a query parser.");
     }
 }
