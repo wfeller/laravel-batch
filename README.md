@@ -51,7 +51,36 @@ it wasn't calling model events, so that wasn't a solution for my needs.
 For the updating part, well... correct me if I'm wrong but I don't think Laravel allows
 updating multiple models at once easily if they all have different data ^^'
 
-### Testing (todo)
+##### Some kind of benchmarks
+
+**These benchmarks are not accurate, but they give some kind of rough idea of the potential performance improvement or usefulness of this package.**
+
+The results vary a lot based on the DB driver, but basically that's what you get:
+1. Laravel's bulk insert (this one doesn't fire model events though, the others do)
+2. This package's batchSave (1.3 to 3 times slower as #1)
+3. Laravel foreach create (8 to 50 times slower as #1)
+
+
+* Laravel's bulk insert is the fastest, but doesn't fire model events.
+``` php
+User::insert([$userA, $userB, $userC]);
+```
+
+* This package takes up to 3 times as long as Laravel's bulk insert, but your model events get fired
+``` php
+User::batchSave([$userA, $userB, $userC]);
+```
+
+* 'Foreach create' is the slowest, taking at least 3 times longer than batchSave()
+``` php
+$users = [$userA, $userB, $userC];
+foreach ($users as $user) 
+{
+    User::create($user);
+}
+```
+
+### Testing
 
 ``` bash
 composer test
