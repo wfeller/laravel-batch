@@ -27,6 +27,7 @@ class BatchInsert implements ShouldQueue
 
     /** @var \Illuminate\Database\Eloquent\Model */
     protected $model;
+    /** @var \Illuminate\Contracts\Events\Dispatcher */
     protected $dispatcher;
     /** @var \WF\Batch\Query\Driver */
     protected $query;
@@ -70,7 +71,7 @@ class BatchInsert implements ShouldQueue
 
             $ids = array_merge($ids, $this->batchInsert($createModels), $this->batchUpdate($updateModels));
 
-            $this->firePostInsertEvents($finalModels);
+            $this->firePostInsertModelEvents($finalModels);
         }
         return $ids;
     }
@@ -174,7 +175,7 @@ class BatchInsert implements ShouldQueue
         return true;
     }
 
-    protected function firePostInsertEvents(array $finalModels) : void
+    protected function firePostInsertModelEvents(array $finalModels) : void
     {
         foreach ($finalModels as $model) {
             if ($model->wasRecentlyCreated && $this->eventTypes['created']) {
