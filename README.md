@@ -57,8 +57,8 @@ updating multiple models at once easily if they all have different data ^^'
 
 The results vary a lot based on the DB driver, but basically that's what you get:
 1. Laravel's bulk insert (this one doesn't fire model events though, the others do)
-2. This package's batchSave (1.3 to 3 times slower as #1)
-3. Laravel foreach create (8 to 50 times slower as #1)
+2. This package's batchSave (1.3 to 3 times slower than #1)
+3. Laravel foreach create (8 to 50 times slower than #1)
 
 
 * Laravel's bulk insert is the fastest, but doesn't fire model events.
