@@ -18,7 +18,7 @@ abstract class TestCase extends BaseTestCase
         Carbon::setTestNow(static::newDate());
     }
 
-    public function setUp()
+    public function setUp() : void
     {
         Carbon::setTestNow(static::newDate());
         parent::setUp();
