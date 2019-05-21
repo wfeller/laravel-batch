@@ -11,7 +11,7 @@ trait Batchable
      * @param int   $chunkSize
      * @return array The ids that were just saved (if available).
      */
-    public static function batchSave(array $models, int $chunkSize = 250) : array
+    public static function batchSave(iterable $models, int $chunkSize = 250) : array
     {
         return (new BatchInsert($models, $chunkSize, static::class))->handle();
     }

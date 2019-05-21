@@ -2,6 +2,7 @@
 
 namespace WF\Batch\Tests\Unit;
 
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Queue;
 use WF\Batch\BatchInsert;
 use WF\Batch\Tests\Models\Car;
@@ -29,6 +30,32 @@ abstract class BaseTests extends TestCase
             $this->newAttributes(),
             $this->newAttributes(),
         ]);
+        $this->assertEquals(5, Car::query()->count());
+
+        $car = Car::query()->latest()->first();
+        $car->wasRecentlyCreated = true;
+
+        $this->assertEquals($this->carAttributes(), $this->formatCar($car));
+    }
+
+    /** @test */
+    public function models_can_be_created_from_iterables()
+    {
+        Car::batchSave([$this->newAttributes()]);
+
+        $this->assertEquals(1, Car::query()->count());
+
+        $car = Car::query()->first();
+        $car->wasRecentlyCreated = true;
+
+        $this->assertEquals($this->carAttributes(), $this->formatCar($car));
+
+        Car::batchSave(new Collection([
+            $this->newAttributes(),
+            $this->newAttributes(),
+            $this->newAttributes(),
+            $this->newAttributes(),
+        ]));
         $this->assertEquals(5, Car::query()->count());
 
         $car = Car::query()->latest()->first();

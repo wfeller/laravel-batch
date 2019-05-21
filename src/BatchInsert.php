@@ -41,9 +41,9 @@ class BatchInsert implements ShouldQueue
         'sqlite' => GenericDriver::class,
     ];
 
-    public function __construct(array $items, int $chunkSize, string $class)
+    public function __construct(iterable $items, int $chunkSize, string $class)
     {
-        $this->items = $items;
+        $this->items = is_array($items) ? $items : iterator_to_array($items, false);
         $this->chunkSize = $chunkSize;
         $this->class = $class;
         $this->model = new $class;
