@@ -12,7 +12,10 @@
     ],
     "require": {
         "php": "^7.2",
-        "laravel/framework": "~5.7.0|~5.8.0"
+        "illuminate/bus": "~5.7.0|~5.8.0",
+        "illuminate/contracts": "~5.7.0|~5.8.0",
+        "illuminate/database": "~5.7.0|~5.8.0",
+        "illuminate/support": "~5.7.0|~5.8.0"
     },
     "require-dev": {
         "doctrine/dbal": "^2.9",
