@@ -19,12 +19,14 @@ class Alternate
         $first = array_shift($arrays);
         $count = count($first);
         $allReversed = [];
+
         foreach (array_reverse($arrays) as $array) {
             if ($count !== count($array)) {
                 throw new BatchInsertException('Invalid number of items.');
             }
             $allReversed[] = $array;
         }
+
         $final = [];
 
         foreach (array_reverse($first) as $value) {
@@ -33,6 +35,7 @@ class Alternate
             }
             $final[] = $value;
         }
+
         return array_reverse($final);
     }
 }
