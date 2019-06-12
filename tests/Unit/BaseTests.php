@@ -5,12 +5,78 @@ namespace WF\Batch\Tests\Unit;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Queue;
 use WF\Batch\BatchInsert;
+use WF\Batch\Exceptions\BatchInsertException;
 use WF\Batch\Tests\Models\Car;
+use WF\Batch\Tests\Models\Company;
+use WF\Batch\Tests\Models\User;
 use WF\Batch\Tests\TestCase;
 
 abstract class BaseTests extends TestCase
 {
     protected $supportsTimezones = false;
+
+    /** @test */
+    public function updaters_must_implement_the_interface()
+    {
+        $this->expectException(BatchInsertException::class);
+        BatchInsert::registerDriver('mariadb', BatchInsert::class);
+    }
+
+    /** @test */
+    public function throws_when_inserting_a_bad_model_instance()
+    {
+        $this->expectException(BatchInsertException::class);
+        Car::batchSave([new User]);
+    }
+
+    /** @test */
+    public function can_insert_models_with_different_array_keys_but_same_number_of_keys()
+    {
+        $companyOne = [
+            'id' => 1,
+            'name' => 'one',
+            'address' => '123 some street',
+            'address_2' => 'really important delivery details',
+            'city' => 'my city',
+            'country_code' => 'us',
+        ];
+        $companyTwo = [
+            'id' => 2,
+            'name' => 'two',
+            'address' => '456 some street',
+            'city' => 'my city',
+            'zipcode' => 'my zipcode',
+            'country_code' => 'us',
+        ];
+
+        Company::batchSave([$companyOne, $companyTwo]);
+
+        $this->assertEquals($companyOne, Company::query()->find(1)->only(array_keys($companyOne)));
+        $this->assertEquals($companyTwo, Company::query()->find(2)->only(array_keys($companyTwo)));
+    }
+
+    /** @test */
+    public function model_properties_are_correctly_updated_on_save()
+    {
+        $c = new Car($this->newAttributes());
+
+        $this->assertFalse($c->exists);
+        $this->assertFalse($c->wasRecentlyCreated);
+
+        Car::batchSave([$c]);
+
+        $this->assertTrue($c->exists);
+        $this->assertTrue($c->wasRecentlyCreated);
+
+        $d = Car::query()->find(Car::query()->create($this->newAttributes())->getKey());
+
+        $d->big_integer = 111;
+
+        Car::batchSave([$d]);
+
+        $this->assertTrue($d->exists);
+        $this->assertFalse($d->wasRecentlyCreated);
+    }
 
     /** @test */
     public function models_can_be_created_from_arrays()

@@ -7,6 +7,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 use WF\Batch\Tests\Models\Car;
+use WF\Batch\Tests\Models\Company;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -35,6 +36,20 @@ abstract class TestCase extends BaseTestCase
 
     public function runMigrations()
     {
+        Schema::dropIfExists((new Company)->getTable());
+        Schema::create((new Company)->getTable(), function (Blueprint $table) {
+            $table->bigIncrements('id');
+
+            $table->string('name');
+            $table->string('address');
+            $table->string('address_2')->nullable()->default(null);
+            $table->string('city');
+            $table->string('zipcode')->nullable()->default(null);
+            $table->string('country_code');
+
+            $table->timestamps();
+        });
+
         Schema::dropIfExists((new Car)->getTable());
         Schema::create((new Car)->getTable(), function (Blueprint $table) {
             $table->bigIncrements('big_increments');
