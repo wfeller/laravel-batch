@@ -38,7 +38,7 @@ $carIds = Car::batchSave([
 ```
 
 For the updates, there will be one DB query per updated column. For the saves, there will
-only be one query.
+only be one query per set of columns.
 
 ### Why have I made this package?
 
