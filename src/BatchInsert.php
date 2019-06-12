@@ -106,7 +106,8 @@ class BatchInsert implements ShouldQueue
             if ($id = $item[$this->settings->keyName] ?? false) {
                 $ids[] = $id;
             }
-            $values[count($item)][] = $item;
+
+            $values[implode('', array_keys($item))][] = $item;
         }
         foreach ($values as $insert) {
             $this->model->newQuery()->insert($insert);
