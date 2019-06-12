@@ -30,7 +30,7 @@ class BatchInsert implements ShouldQueue
     protected $eventTypes;
     protected $now;
 
-    protected static $drivers = [
+    protected static $updaters = [
         'pgsql' => Updater\PostgresUpdater::class,
         'mysql' => Updater\GenericUpdater::class,
         'sqlite' => Updater\GenericUpdater::class,
@@ -49,7 +49,7 @@ class BatchInsert implements ShouldQueue
             throw new BatchInsertException("'$class' is not an '".Updater\Updater::class."'.");
         }
 
-        static::$drivers[$driver] = $class;
+        static::$updaters[$driver] = $class;
     }
 
     public function handle() : array
@@ -84,11 +84,11 @@ class BatchInsert implements ShouldQueue
     {
         $driver = $this->dbConnection->getDriverName();
 
-        if (! isset(static::$drivers[$driver])) {
+        if (! isset(static::$updaters[$driver])) {
             throw new BatchInsertException("Database driver '$driver' does not have an updater.");
         }
 
-        $this->updater = app(static::$drivers[$driver]);
+        $this->updater = app(static::$updaters[$driver]);
     }
 
     protected function batchInsert(array $items) : array
