@@ -166,7 +166,9 @@ class BatchInsert implements ShouldQueue
     protected function prepareModel($model) : Model
     {
         if (! $model instanceof Model) {
-            $model = (new $this->class)->forceFill($model);
+            $model = $this->model->newInstance()->forceFill($model);
+        } elseif (! $model instanceof $this->class) {
+            throw new BatchInsertException("Unexpected class '".get_class($model)."'.");
         }
 
         if ($this->settings->usesTimestamps) {
