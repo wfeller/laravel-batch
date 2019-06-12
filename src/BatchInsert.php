@@ -203,6 +203,8 @@ class BatchInsert implements ShouldQueue
     protected function firePostInsertModelEvents(array $finalModels) : void
     {
         foreach ($finalModels as $model) {
+            $model->exists = true;
+
             if ($model->wasRecentlyCreated && $this->eventTypes['created']) {
                 $this->fireModelEvent($model, 'created', false);
             } elseif ($this->eventTypes['updated']) {
