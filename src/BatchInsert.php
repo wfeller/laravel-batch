@@ -12,22 +12,29 @@ class BatchInsert implements ShouldQueue
 {
     use Queueable;
 
+    /** @var \Illuminate\Database\Connection */
     public $dbConnection;
+    /** @var \WF\Batch\Settings */
     public $settings;
 
+    /** @var array|iterable */
     public $items;
+    /** @var integer */
     public $chunkSize;
-    /** @var \Illuminate\Database\Eloquent\Model */
-    public $class;
 
+    /** @var \Illuminate\Database\Eloquent\Model|string */
+    public $class;
     /** @var \Illuminate\Database\Eloquent\Model */
     protected $model;
-    /** @var \Illuminate\Contracts\Events\Dispatcher */
+
+    /** @var \Illuminate\Events\Dispatcher */
     protected $dispatcher;
     /** @var \WF\Batch\Updater\Updater */
     protected $updater;
 
+    /** @var array */
     protected $eventTypes;
+    /** @var \DateTimeInterface */
     protected $now;
 
     protected static $updaters = [
@@ -96,13 +103,13 @@ class BatchInsert implements ShouldQueue
         $ids = [];
         $values = [];
         foreach ($items as $item) {
-            if ($id = Arr::get($item, $this->settings->keyName, false)) {
+            if ($id = $item[$this->settings->keyName] ?? false) {
                 $ids[] = $id;
             }
             $values[count($item)][] = $item;
         }
         foreach ($values as $insert) {
-            $this->class::query()->insert($insert);
+            $this->model->newQuery()->insert($insert);
         }
         return $ids;
     }
@@ -135,7 +142,7 @@ class BatchInsert implements ShouldQueue
 
     protected function prepareBatches(array $modelsChunk) : array
     {
-        list($createModels, $updateModels, $finalModels) = [[], [], []];
+        [$createModels, $updateModels, $finalModels] = [[], [], []];
         foreach ($modelsChunk as $model) {
             $model = $this->prepareModel($model);
 
@@ -160,12 +167,14 @@ class BatchInsert implements ShouldQueue
         if (! $model instanceof Model) {
             $model = (new $this->class)->forceFill($model);
         }
+
         if ($this->settings->usesTimestamps) {
             if (! $model->exists) {
                 $model->setCreatedAt($this->now);
             }
             $model->setUpdatedAt($this->now);
         }
+
         return $model;
     }
 
