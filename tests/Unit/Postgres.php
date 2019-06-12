@@ -2,8 +2,8 @@
 
 namespace WF\Batch\Tests\Unit;
 
-use WF\Batch\Query\PostgresDriver;
 use WF\Batch\Tests\Models\Car;
+use WF\Batch\Updater\PostgresUpdater;
 
 class Postgres extends BaseTests
 {
@@ -11,7 +11,7 @@ class Postgres extends BaseTests
 
     protected function getEnvironmentSetUp($app)
     {
-        PostgresDriver::registerRareTypes();
+        PostgresUpdater::registerRareTypes();
         parent::getEnvironmentSetUp($app);
     }
 

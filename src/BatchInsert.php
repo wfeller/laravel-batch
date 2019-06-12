@@ -3,15 +3,10 @@
 namespace WF\Batch;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Carbon;
 use WF\Batch\Exceptions\BatchInsertException;
-use WF\Batch\Query\Driver;
-use WF\Batch\Query\GenericDriver;
-use WF\Batch\Query\PostgresDriver;
 
 class BatchInsert implements ShouldQueue
 {
@@ -29,16 +24,16 @@ class BatchInsert implements ShouldQueue
     protected $model;
     /** @var \Illuminate\Contracts\Events\Dispatcher */
     protected $dispatcher;
-    /** @var \WF\Batch\Query\Driver */
-    protected $query;
+    /** @var \WF\Batch\Updater\Updater */
+    protected $updater;
 
     protected $eventTypes;
     protected $now;
 
     protected static $drivers = [
-        'pgsql' => PostgresDriver::class,
-        'mysql' => GenericDriver::class,
-        'sqlite' => GenericDriver::class,
+        'pgsql' => Updater\PostgresUpdater::class,
+        'mysql' => Updater\GenericUpdater::class,
+        'sqlite' => Updater\GenericUpdater::class,
     ];
 
     public function __construct(iterable $items, int $chunkSize, string $class)
@@ -46,34 +41,54 @@ class BatchInsert implements ShouldQueue
         $this->items = is_array($items) ? $items : iterator_to_array($items, false);
         $this->chunkSize = $chunkSize;
         $this->class = $class;
-        $this->model = new $class;
-        $this->settings = new Settings($this->model);
-        $this->dispatcher = app(Dispatcher::class);
-        $this->dbConnection = $this->model->getConnection();
-        $this->setQuery();
-        $this->now = Carbon::now();
-        $this->eventTypes = $this->eventTypes();
     }
 
     public static function registerDriver(string $driver, string $class) : void
     {
-        if (! is_a($class, Driver::class, true)) {
-            throw new BatchInsertException("'$class' does not extend '".Driver::class."'.");
+        if (! is_a($class, Updater\Updater::class, true)) {
+            throw new BatchInsertException("'$class' is not an '".Updater\Updater::class."'.");
         }
+
         static::$drivers[$driver] = $class;
     }
 
     public function handle() : array
     {
+        $this->setup();
+
         $ids = [];
+
         foreach (array_chunk($this->items, $this->chunkSize) as $modelsChunk) {
-            list($createModels, $updateModels, $finalModels) = $this->prepareBatches($modelsChunk);
+            [$createModels, $updateModels, $finalModels] = $this->prepareBatches($modelsChunk);
 
             $ids = array_merge($ids, $this->batchInsert($createModels), $this->batchUpdate($updateModels));
 
             $this->firePostInsertModelEvents($finalModels);
         }
+
         return $ids;
+    }
+
+    protected function setup() : void
+    {
+        $this->model = new $this->class;
+        $this->settings = new Settings($this->model);
+        $this->dispatcher = $this->model->getEventDispatcher();
+        $this->dbConnection = $this->model->getConnection();
+        $this->now = $this->model->freshTimestamp();
+        $this->eventTypes = $this->eventTypes();
+        $this->initializeUpdater();
+    }
+
+    protected function initializeUpdater() : void
+    {
+        $driver = $this->dbConnection->getDriverName();
+
+        if (! isset(static::$drivers[$driver])) {
+            throw new BatchInsertException("Database driver '$driver' does not have an updater.");
+        }
+
+        $this->updater = app(static::$drivers[$driver]);
     }
 
     protected function batchInsert(array $items) : array
@@ -101,8 +116,9 @@ class BatchInsert implements ShouldQueue
             if (empty($updated)) {
                 continue;
             }
-            $this->query->performUpdate($column, ...$this->pullUpdateValues($updated, $column));
+            $this->updater->performUpdate($this, $column, ...$this->pullUpdateValues($updated, $column));
         }
+
         return Arr::pluck($models, $this->settings->keyName);
     }
 
@@ -202,18 +218,5 @@ class BatchInsert implements ShouldQueue
     {
         $method = $halt ? 'until' : 'dispatch';
         return $this->dispatcher->{$method}("eloquent.{$event}: {$this->class}", $model);
-    }
-
-    protected function setQuery() : void
-    {
-        $driver = $this->dbConnection->getDriverName();
-
-        if (isset(static::$drivers[$driver])) {
-            $class = static::$drivers[$driver];
-            $this->query = new $class($this);
-            return;
-        }
-
-        throw new BatchInsertException("Database driver '$driver' does not have a query parser.");
     }
 }
