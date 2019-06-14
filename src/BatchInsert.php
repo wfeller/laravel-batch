@@ -117,7 +117,7 @@ class BatchInsert implements ShouldQueue
 
     protected function batchUpdate(array $models) : array
     {
-        foreach ($this->settings->columns as $column) {
+        foreach ($this->settings->getColumns() as $column) {
             $updated = array_filter($models, function ($model) use ($column) {
                 return array_key_exists($column, $model);
             });
