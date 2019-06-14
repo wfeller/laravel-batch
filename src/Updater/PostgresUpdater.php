@@ -13,12 +13,14 @@ final class PostgresUpdater implements Updater
     private static $castTypes = [];
     private $keyCast;
     private static $rareTypesRegistered = false;
-    private static $doctrineMappingSetup = false;
 
     public function performUpdate(BatchInsert $insert, string $column, array $values, array $ids) : void
     {
         $this->keyCast = in_array($insert->settings->keyType, ['int', 'integer']) ? '::integer' : '::text';
-        $this->initializeRareTypes($insert);
+
+        if (self::$rareTypesRegistered) {
+            $this->initializeRareTypes($insert);
+        }
 
         $insert->dbConnection->update(
             $this->sql($insert, $column, count($values)),
@@ -86,15 +88,9 @@ final class PostgresUpdater implements Updater
 
     private function initializeRareTypes(BatchInsert $insert) : void
     {
-        if (self::$doctrineMappingSetup) {
-            return;
-        }
-
         $platform = $insert->dbConnection->getDoctrineConnection()->getDatabasePlatform();
         $platform->registerDoctrineTypeMapping('macaddr', 'macaddr');
         $platform->registerDoctrineTypeMapping('inet', 'inet');
-
-        self::$doctrineMappingSetup = true;
     }
 
     public static function registerRareTypes() : void
