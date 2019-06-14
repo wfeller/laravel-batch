@@ -31,10 +31,10 @@ final class PostgresUpdater implements Updater
     private function sql(BatchInsert $insert, string $column, int $valuesCount) : string
     {
         $stringValues = implode(',', array_fill(0, $valuesCount, '(?, ?)'));
-        return "UPDATE \"{$insert->settings->table}\" AS t
-                SET \"{$column}\" = (help_c.column_copy){$this->castTypeForColumn($column)}
-                FROM (VALUES {$stringValues}) AS help_c(column_id, column_copy)
-                WHERE (help_c.column_id){$this->keyCast} = t.\"{$insert->settings->keyName}\"{$this->keyCast}";
+        return "update \"{$insert->settings->table}\" as t
+                set \"{$column}\" = (help_c.column_copy){$this->castTypeForColumn($column)}
+                from (values {$stringValues}) as help_c(column_id, column_copy)
+                where (help_c.column_id){$this->keyCast} = t.\"{$insert->settings->keyName}\"{$this->keyCast}";
     }
 
     private function castTypeForColumn(BatchInsert $insert, string $column) : string

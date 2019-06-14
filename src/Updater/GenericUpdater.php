@@ -17,11 +17,11 @@ final class GenericUpdater implements Updater
 
     private function sql(BatchInsert $insert, string $column, int $valuesCount) : string
     {
-        $stringValues = array_fill(0, $valuesCount, "WHEN `{$insert->settings->keyName}` = ? THEN ?");
+        $stringValues = array_fill(0, $valuesCount, "when `{$insert->settings->keyName}` = ? then ?");
         $stringValues = implode(' ', $stringValues);
         $stringIds = implode(',', array_fill(0, $valuesCount, '?'));
 
-        return "UPDATE `{$insert->settings->table}` SET `{$column}` = CASE {$stringValues} END
-                WHERE `{$insert->settings->keyName}` IN ({$stringIds})";
+        return "update `{$insert->settings->table}` set `{$column}` = case {$stringValues} end
+                where `{$insert->settings->keyName}` in ({$stringIds})";
     }
 }
