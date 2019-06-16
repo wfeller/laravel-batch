@@ -4,9 +4,16 @@ namespace WF\Batch;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Settings
+/**
+ * Class Settings
+ * @package WF\Batch
+ * @internal
+ */
+final class Settings
 {
-    private $model;
+    public $class;
+    /** @var Model */
+    public $model;
     private $columns = null;
 
     public $table;
@@ -14,13 +21,28 @@ class Settings
     public $keyType;
     public $usesTimestamps;
 
-    public function __construct(Model $model)
+    public $now;
+    public $dbConnection;
+    public $dispatcher;
+
+    public $events = [];
+
+    public function __construct(Batch $batch)
     {
-        $this->model = $model;
-        $this->table = $model->getTable();
-        $this->keyName = $model->getKeyName();
-        $this->keyType = $model->getKeyType();
-        $this->usesTimestamps = $model->usesTimestamps();
+        $class = $batch->getClass();
+        $this->class = $class;
+        $this->model = new $class;
+        $this->table = $this->model->getTable();
+        $this->keyName = $this->model->getKeyName();
+        $this->keyType = $this->model->getKeyType();
+        $this->usesTimestamps = $this->model->usesTimestamps();
+        $this->now = $this->model->freshTimestamp();
+        $this->dbConnection = $this->model->getConnection();
+        $this->dispatcher = $this->model->getEventDispatcher();
+
+        foreach ($this->model->getObservableEvents() as $type) {
+            $this->events[$type] = count($this->dispatcher->getListeners("eloquent.{$type}: {$this->class}")) > 0;
+        }
     }
 
     public function getColumns() : array

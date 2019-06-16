@@ -2,8 +2,12 @@
 
 namespace WF\Batch\Tests\Unit;
 
-class Sqlite extends BaseTests
+use WF\Batch\Tests\TestCase;
+
+class Sqlite extends TestCase
 {
+    use SaveTests, DeleteTests;
+
     protected function databaseDriver() : array
     {
         return [

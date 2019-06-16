@@ -4,28 +4,27 @@ namespace WF\Batch\Tests\Unit;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Queue;
-use WF\Batch\BatchInsert;
-use WF\Batch\Exceptions\BatchInsertException;
+use WF\Batch\Exceptions\BatchException;
+use WF\Batch\SaveHandler;
 use WF\Batch\Tests\Models\Car;
 use WF\Batch\Tests\Models\Company;
 use WF\Batch\Tests\Models\User;
-use WF\Batch\Tests\TestCase;
 
-abstract class BaseTests extends TestCase
+trait SaveTests
 {
     protected $supportsTimezones = false;
 
     /** @test */
     public function updaters_must_implement_the_interface()
     {
-        $this->expectException(BatchInsertException::class);
-        BatchInsert::registerDriver('mariadb', BatchInsert::class);
+        $this->expectException(BatchException::class);
+        SaveHandler::registerUpdater('mariadb', SaveHandler::class);
     }
 
     /** @test */
     public function throws_when_inserting_a_bad_model_instance()
     {
-        $this->expectException(BatchInsertException::class);
+        $this->expectException(BatchException::class);
         Car::batchSave([new User]);
     }
 
@@ -176,24 +175,13 @@ abstract class BaseTests extends TestCase
     {
         Queue::fake();
 
-        Car::batchSaveQueue([
-            $this->newAttributes(),
-        ]);
+        $job = Car::batch([$this->newAttributes()])->save();
+        $job->dispatch();
 
-        Queue::assertPushed(BatchInsert::class, function (BatchInsert $job) {
-            return count($job->items) === 1 && $job->class === Car::class;
-        });
+        $jobId = spl_object_id($job);
 
-        Car::batchSaveQueue([
-            $this->newAttributes(),
-            $this->newAttributes(),
-            $this->newAttributes(),
-            $this->newAttributes(),
-            $this->newAttributes(),
-        ]);
-
-        Queue::assertPushed(BatchInsert::class, function (BatchInsert $job) {
-            return count($job->items) === 5 && $job->class === Car::class;
+        Queue::assertPushed(SaveHandler::class, function (SaveHandler $job) use ($jobId) {
+            return spl_object_id($job) === $jobId;
         });
     }
 
