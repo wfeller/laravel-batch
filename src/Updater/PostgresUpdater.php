@@ -32,7 +32,7 @@ final class PostgresUpdater implements Updater
     {
         $stringValues = implode(',', array_fill(0, $valuesCount, '(?, ?)'));
         return "update \"{$insert->settings->table}\" as t
-                set \"{$column}\" = (help_c.column_copy){$this->castTypeForColumn($column)}
+                set \"{$column}\" = (help_c.column_copy){$this->castTypeForColumn($insert, $column)}
                 from (values {$stringValues}) as help_c(column_id, column_copy)
                 where (help_c.column_id){$this->keyCast} = t.\"{$insert->settings->keyName}\"{$this->keyCast}";
     }
