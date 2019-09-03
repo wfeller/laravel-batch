@@ -109,7 +109,7 @@ final class DeleteHandler extends AbstractHandler
             }
         }
 
-        return $this->settings->model->newQuery()->findMany($keys, $this->settings->keyName)->all();
+        return $this->settings->model->newQuery()->whereKey($keys)->pluck($this->settings->keyName)->all();
     }
 
     private function refreshModels(array $models) : array
