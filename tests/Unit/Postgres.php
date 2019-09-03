@@ -13,7 +13,11 @@ class Postgres extends TestCase
     }
     use DeleteTests;
 
-    protected $supportsTimezones = true;
+    public function setUp() : void
+    {
+        $this->supportsTimezones = false;
+        parent::setUp();
+    }
 
     protected function getEnvironmentSetUp($app)
     {
