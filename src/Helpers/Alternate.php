@@ -2,7 +2,7 @@
 
 namespace WF\Batch\Helpers;
 
-use WF\Batch\Exceptions\BatchInsertException;
+use WF\Batch\Exceptions\BatchException;
 
 class Alternate
 {
@@ -22,8 +22,9 @@ class Alternate
 
         foreach (array_reverse($arrays) as $array) {
             if ($count !== count($array)) {
-                throw new BatchInsertException('Invalid number of items.');
+                throw BatchException::inconsistentArraySizes($count, count($array));
             }
+
             $allReversed[] = $array;
         }
 
@@ -33,6 +34,7 @@ class Alternate
             foreach ($allReversed as &$array) {
                 $final[] = array_pop($array);
             }
+
             $final[] = $value;
         }
 

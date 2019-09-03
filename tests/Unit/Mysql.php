@@ -2,8 +2,12 @@
 
 namespace WF\Batch\Tests\Unit;
 
-class Mysql extends BaseTests
+use WF\Batch\Tests\TestCase;
+
+class Mysql extends TestCase
 {
+    use SaveTests, DeleteTests;
+
     protected function databaseDriver() : array
     {
         return [

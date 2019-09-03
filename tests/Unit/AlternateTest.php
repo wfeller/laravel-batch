@@ -2,7 +2,7 @@
 
 namespace WF\Batch\Tests\Unit;
 
-use WF\Batch\Exceptions\BatchInsertException;
+use WF\Batch\Exceptions\BatchException;
 use WF\Batch\Helpers\Alternate;
 use WF\Batch\Tests\TestCase;
 
@@ -35,7 +35,7 @@ class AlternateTest extends TestCase
     /** @test */
     public function throws_if_arrays_dont_have_the_same_number_of_items()
     {
-        $this->expectException(BatchInsertException::class);
+        $this->expectException(BatchException::class);
         Alternate::arrays([1], [2], [3], [4, 5], [6]);
     }
 }

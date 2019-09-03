@@ -13,7 +13,7 @@ abstract class TestCase extends BaseTestCase
 {
     protected static $timezone = null;
 
-    public static function setUpBeforeClass()
+    public static function setUpBeforeClass() : void
     {
         parent::setUpBeforeClass();
         Carbon::setTestNow(static::newDate());

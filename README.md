@@ -28,28 +28,40 @@ class Car extends \Illuminate\Database\Eloquent\Model
 }
 ```
 
-and then you'll be able to call the batch insert method:
+### Creating And Updating Models
+
 ``` php
-$carIds = Car::batchSave([
+$cars = [
     ['brand' => 'Audi', 'model' => 'A6'],
     ['brand' => 'Ford', 'model' => 'Mustang'],
     $myCar // an existing or new car instance
-]);
+];
+
+$carIds = Car::batch($cars)->save()->now();
+// in a queue
+Car::batch($cars)->save()->dispatch();
+// Car::batch($cars)->save()->onQueue('other queue')->dispatch();
 ```
 
 For the updates, there will be one DB query per updated column. For the saves, there will
 only be one query per set of columns.
 
-### Why have I made this package?
+### Deleting Models
 
-I needed to import models from an excel file, and I happened to have about 10 000 models
-to import (mix of saves and updates).
+``` php
+$cars = [
+    1, // a car id
+    $car, // a car instance
+    ... // many more cars
+];
 
-For the saving part, Laravel's Model::insert() could have inserted my models in batch, but
-it wasn't calling model events, so that wasn't a solution for my needs.
+$deletedIds = Car::batch($cars)->delete()->now();
+// in a queue
+Car::batch($cars)->delete()->dispatch();
+// Car::batch($cars)->delete()->onQueue('other queue')->dispatch();
+```
 
-For the updating part, well... correct me if I'm wrong but I don't think Laravel allows
-updating multiple models at once easily if they all have different data ^^'
+You'll have 1 query to delete your models. If you're passing model IDs, the models will be loaded from the DB to fire the deletion model events.
 
 ### Some kind of benchmarks
 

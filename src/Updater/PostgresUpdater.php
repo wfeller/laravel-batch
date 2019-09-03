@@ -4,49 +4,49 @@ namespace WF\Batch\Updater;
 
 use Doctrine\DBAL\PostgresTypes as Types;
 use Doctrine\DBAL\Types\Type;
-use WF\Batch\BatchInsert;
-use WF\Batch\Exceptions\BatchInsertException;
+use WF\Batch\Exceptions\BatchException;
 use WF\Batch\Helpers\Alternate;
+use WF\Batch\Settings;
 
 final class PostgresUpdater implements Updater
 {
-    private static $castTypes = [];
     private $keyCast;
+    private static $castTypes = [];
     private static $rareTypesRegistered = false;
 
-    public function performUpdate(BatchInsert $insert, string $column, array $values, array $ids) : void
+    public function performUpdate(Settings $settings, string $column, array $values, array $ids) : void
     {
-        $this->keyCast = in_array($insert->settings->keyType, ['int', 'integer']) ? '::integer' : '::text';
+        $this->keyCast = in_array($settings->keyType, ['int', 'integer']) ? '::integer' : '::text';
 
         if (self::$rareTypesRegistered) {
-            $this->initializeRareTypes($insert);
+            $this->initializeRareTypes($settings);
         }
 
-        $insert->dbConnection->update(
-            $this->sql($insert, $column, count($values)),
+        $settings->dbConnection->update(
+            $this->sql($settings, $column, count($values)),
             Alternate::arrays($ids, $values)
         );
     }
 
-    private function sql(BatchInsert $insert, string $column, int $valuesCount) : string
+    private function sql(Settings $settings, string $column, int $valuesCount) : string
     {
         $stringValues = implode(',', array_fill(0, $valuesCount, '(?, ?)'));
-        return "update \"{$insert->settings->table}\" as t
-                set \"{$column}\" = (help_c.column_copy){$this->castTypeForColumn($insert, $column)}
+        return "update \"{$settings->table}\" as t
+                set \"{$column}\" = (help_c.column_copy){$this->castTypeForColumn($settings, $column)}
                 from (values {$stringValues}) as help_c(column_id, column_copy)
-                where (help_c.column_id){$this->keyCast} = t.\"{$insert->settings->keyName}\"{$this->keyCast}";
+                where (help_c.column_id){$this->keyCast} = t.\"{$settings->keyName}\"{$this->keyCast}";
     }
 
-    private function castTypeForColumn(BatchInsert $insert, string $column) : string
+    private function castTypeForColumn(Settings $settings, string $column) : string
     {
-        if (! isset(self::$castTypes[$insert->settings->table][$column])) {
-            self::$castTypes[$insert->settings->table][$column] = $this->castType(
-                $insert->dbConnection
+        if (! isset(self::$castTypes[$settings->table][$column])) {
+            self::$castTypes[$settings->table][$column] = $this->castType(
+                $settings->dbConnection
                     ->getSchemaBuilder()
-                    ->getColumnType($insert->settings->table, $column)
+                    ->getColumnType($settings->table, $column)
             );
         }
-        return self::$castTypes[$insert->settings->table][$column];
+        return self::$castTypes[$settings->table][$column];
     }
 
     private function castType(string $type) : string
@@ -86,9 +86,9 @@ final class PostgresUpdater implements Updater
         }
     }
 
-    private function initializeRareTypes(BatchInsert $insert) : void
+    private function initializeRareTypes(Settings $settings) : void
     {
-        $platform = $insert->dbConnection->getDoctrineConnection()->getDatabasePlatform();
+        $platform = $settings->dbConnection->getDoctrineConnection()->getDatabasePlatform();
         $platform->registerDoctrineTypeMapping('macaddr', 'macaddr');
         $platform->registerDoctrineTypeMapping('inet', 'inet');
     }
@@ -110,7 +110,7 @@ final class PostgresUpdater implements Updater
 
             self::$rareTypesRegistered = true;
         } else {
-            throw new BatchInsertException('Missing required classes.');
+            throw BatchException::missingPostgresTypesDependency();
         }
     }
 }

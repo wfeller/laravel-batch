@@ -3,11 +3,21 @@
 namespace WF\Batch\Tests\Unit;
 
 use WF\Batch\Tests\Models\Car;
+use WF\Batch\Tests\TestCase;
 use WF\Batch\Updater\PostgresUpdater;
 
-class Postgres extends BaseTests
+class Postgres extends TestCase
 {
-    protected $supportsTimezones = true;
+    use SaveTests {
+        formatCar as saveTestsFormatCar;
+    }
+    use DeleteTests;
+
+    public function setUp() : void
+    {
+        $this->supportsTimezones = false;
+        parent::setUp();
+    }
 
     protected function getEnvironmentSetUp($app)
     {
@@ -34,7 +44,7 @@ class Postgres extends BaseTests
 
     protected function formatCar(Car $car) : array
     {
-        $attributes = parent::formatCar($car);
+        $attributes = $this->saveTestsFormatCar($car);
         $attributes['binary'] = $car->wasRecentlyCreated ? 'a' : 'b'; // fuck it - fixme...
         $attributes['char'] = trim($attributes['char']);
         return $attributes;
