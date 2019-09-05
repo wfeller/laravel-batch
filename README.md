@@ -18,29 +18,25 @@ composer require wfeller/laravel-batch
 
 ## Usage
 
-Just add this trait to your models:
+### Creating and updating models
 ``` php
-class Car extends \Illuminate\Database\Eloquent\Model
-{
-    use \WF\Batch\Traits\Batchable;
-    
-    // ...
-}
-```
+use App\Car;
+use WF\Batch\Batch;
 
-### Creating And Updating Models
-
-``` php
 $cars = [
     ['brand' => 'Audi', 'model' => 'A6'],
     ['brand' => 'Ford', 'model' => 'Mustang'],
     $myCar // an existing or new car instance
 ];
 
-$carIds = Car::batch($cars)->save()->now();
-// in a queue
-Car::batch($cars)->save()->dispatch();
-// Car::batch($cars)->save()->onQueue('other queue')->dispatch();
+$carIds = Batch::of(Car::class, $cars)->save()->now();
+
+// You can queue the batch
+Batch::of(Car::class, $cars)->save()->dispatch();
+Batch::of(Car::class, $cars)->save()->onQueue('other-queue')->dispatch();
+
+// You can set the batch size based on your needs
+Batch::of(Car::class, $cars)->batchSize(1000)->save()->now();
 ```
 
 For the updates, there will be one DB query per updated column. For the saves, there will
@@ -49,19 +45,36 @@ only be one query per set of columns.
 ### Deleting Models
 
 ``` php
+use App\Car;
+use WF\Batch\Batch;
+
 $cars = [
     1, // a car id
     $car, // a car instance
     ... // many more cars
 ];
 
-$deletedIds = Car::batch($cars)->delete()->now();
-// in a queue
-Car::batch($cars)->delete()->dispatch();
-// Car::batch($cars)->delete()->onQueue('other queue')->dispatch();
+$deletedIds = Batch::of(Car::class, $cars)->delete()->now();
+Batch::of(Car::class, $cars)->delete()->dispatch();
+Batch::of(Car::class, $cars)->delete()->onQueue('other-queue')->dispatch();
 ```
 
 You'll have 1 query to delete your models. If you're passing model IDs, the models will be loaded from the DB to fire the deletion model events.
+
+###If you want to create batches directly from your models:
+``` php
+class Car extends \Illuminate\Database\Eloquent\Model
+{
+    use \WF\Batch\Traits\Batchable;
+    
+    // ...
+}
+
+// This allows you to call
+Car::newBatch($cars)->save()->now();
+// which is the same as
+Batch::of(Car::class, $cars)->save()->now();
+```
 
 ### Some kind of benchmarks
 
@@ -69,7 +82,7 @@ You'll have 1 query to delete your models. If you're passing model IDs, the mode
 
 The results vary a lot based on the DB driver, but basically that's what you get:
 1. Laravel's bulk insert (this one doesn't fire model events though, the others do)
-2. This package's batchSave (1.3 to 3 times slower than #1)
+2. This package's Batch Saving (1.3 to 3 times slower than #1)
 3. Laravel foreach create (8 to 50 times slower than #1)
 
 
@@ -78,12 +91,12 @@ The results vary a lot based on the DB driver, but basically that's what you get
 User::insert([$userA, $userB, $userC]);
 ```
 
-* This package takes up to 3 times as long as Laravel's bulk insert, but your model events get fired
+* This package's Batch Saving takes up to 3 times as long as Laravel's bulk insert, but your model events get fired
 ``` php
-User::batchSave([$userA, $userB, $userC]);
+Batch::of(User::class, [$userA, $userB, $userC])->save()->now();
 ```
 
-* 'Foreach create' is the slowest, taking at least 3 times longer than batchSave()
+* 'Foreach create' is the slowest, taking at least 3 times longer than Batch Saving
 ``` php
 $users = [$userA, $userB, $userC];
 foreach ($users as $user) 
