@@ -61,7 +61,7 @@ Batch::of(Car::class, $cars)->delete()->onQueue('other-queue')->dispatch();
 
 You'll have 1 query to delete your models. If you're passing model IDs, the models will be loaded from the DB to fire the deletion model events.
 
-###If you want to create batches directly from your models:
+### If you want to create batches directly from your models:
 ``` php
 class Car extends \Illuminate\Database\Eloquent\Model
 {
