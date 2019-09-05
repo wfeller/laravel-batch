@@ -4,10 +4,12 @@ namespace WF\Batch\Tests\Unit;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Queue;
+use WF\Batch\Batch;
 use WF\Batch\Exceptions\BatchException;
 use WF\Batch\SaveHandler;
 use WF\Batch\Tests\Models\Car;
 use WF\Batch\Tests\Models\Company;
+use WF\Batch\Tests\Models\ModelWithoutBatchableTrait;
 use WF\Batch\Tests\Models\User;
 
 trait SaveTests
@@ -183,6 +185,20 @@ trait SaveTests
         Queue::assertPushed(SaveHandler::class, function (SaveHandler $job) use ($jobId) {
             return spl_object_id($job) === $jobId;
         });
+    }
+
+    /** @test */
+    public function it_can_batch_models_that_dont_use_the_batchable_trait()
+    {
+        $this->assertCount(0, ModelWithoutBatchableTrait::all());
+
+        Batch::of(ModelWithoutBatchableTrait::class, [
+            ['name' => 'Jack'],
+            ['name' => 'Joe'],
+            ['name' => 'John'],
+        ])->save()->now();
+
+        $this->assertCount(3, ModelWithoutBatchableTrait::all());
     }
 
     protected function formatCar(Car $car) : array

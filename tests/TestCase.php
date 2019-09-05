@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 use WF\Batch\Tests\Models\Car;
 use WF\Batch\Tests\Models\Company;
+use WF\Batch\Tests\Models\ModelWithoutBatchableTrait;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -47,6 +48,13 @@ abstract class TestCase extends BaseTestCase
             $table->string('zipcode')->nullable()->default(null);
             $table->string('country_code');
 
+            $table->timestamps();
+        });
+
+        Schema::dropIfExists((new ModelWithoutBatchableTrait)->getTable());
+        Schema::create((new ModelWithoutBatchableTrait)->getTable(), function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name');
             $table->timestamps();
         });
 
@@ -105,6 +113,7 @@ abstract class TestCase extends BaseTestCase
         if (empty(static::$timezone)) {
             static::$timezone = system('date +%Z');
         }
+
         return Carbon::parse('2019-01-01 01:00:00', static::$timezone);
     }
 
