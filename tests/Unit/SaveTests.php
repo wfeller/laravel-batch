@@ -175,7 +175,7 @@ trait SaveTests
     {
         Queue::fake();
 
-        $job = Car::batch([$this->newAttributes()])->save();
+        $job = Car::newBatch([$this->newAttributes()])->save();
         $job->dispatch();
 
         $jobId = spl_object_id($job);

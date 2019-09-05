@@ -6,9 +6,9 @@ use WF\Batch\Batch;
 
 trait Batchable
 {
-    public static function batch(iterable $models) : Batch
+    public static function newBatch(iterable $models) : Batch
     {
-        return new Batch($models, static::class);
+        return Batch::of(static::class, $models);
     }
 
     /**
@@ -18,12 +18,12 @@ trait Batchable
      */
     public static function batchSave(iterable $models, int $batchSize = 500) : array
     {
-        return static::batch($models)->batchSize($batchSize)->save()->now();
+        return static::newBatch($models)->batchSize($batchSize)->save()->now();
     }
 
     public static function batchSaveQueue(array $models, int $chunkSize = 500, string $queue = null) : void
     {
-        static::batch($models)->batchSize($chunkSize)->save()->onQueue($queue)->dispatch();
+        static::newBatch($models)->batchSize($chunkSize)->save()->onQueue($queue)->dispatch();
     }
 
     /**
@@ -33,11 +33,11 @@ trait Batchable
      */
     public static function batchDelete(array $models, int $batchSize = 500) : array
     {
-        return static::batch($models)->batchSize($batchSize)->delete()->now();
+        return static::newBatch($models)->batchSize($batchSize)->delete()->now();
     }
 
     public static function batchDeleteQueue(array $models, int $batchSize = 500, string $queue = null) : void
     {
-        static::batch($models)->batchSize($batchSize)->delete()->onQueue($queue)->dispatch();
+        static::newBatch($models)->batchSize($batchSize)->delete()->onQueue($queue)->dispatch();
     }
 }

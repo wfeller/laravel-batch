@@ -28,6 +28,11 @@ final class Batch
         $this->verifyModels();
     }
 
+    public static function of(string $class, iterable $models) : self
+    {
+        return new self($models, $class);
+    }
+
     public function batchSize(int $batchSize) : self
     {
         if ($batchSize <= 0) {
