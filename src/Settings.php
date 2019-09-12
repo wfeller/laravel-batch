@@ -41,7 +41,7 @@ final class Settings
         $this->dispatcher = $this->model->getEventDispatcher();
 
         foreach ($this->model->getObservableEvents() as $type) {
-            $this->events[$type] = count($this->dispatcher->getListeners("eloquent.{$type}: {$this->class}")) > 0;
+            $this->events[$type] = $this->dispatcher->hasListeners("eloquent.{$type}: {$this->class}");
         }
     }
 
