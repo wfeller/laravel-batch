@@ -5,11 +5,6 @@ namespace WF\Batch;
 use Illuminate\Database\Eloquent\Model;
 use WF\Batch\Exceptions\BatchException;
 
-/**
- * Class Batch
- * @package WF\Batch
- * @internal
- */
 final class Batch
 {
     private $models;
