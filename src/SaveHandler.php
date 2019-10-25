@@ -7,8 +7,7 @@ use Illuminate\Support\Arr;
 use WF\Batch\Exceptions\BatchException;
 
 /**
- * Class SaveHandler
- * @package WF\Batch
+ * @internal
  */
 final class SaveHandler extends AbstractHandler
 {
@@ -32,7 +31,7 @@ final class SaveHandler extends AbstractHandler
         self::$updaters[$driver] = $class;
     }
 
-    public function handle() : array
+    protected function performAction() : array
     {
         $this->settings = new Settings($this->batch);
         $this->initializeUpdater();

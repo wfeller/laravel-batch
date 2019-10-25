@@ -24,6 +24,16 @@ trait DeleteTests
     }
 
     /** @test */
+    public function it_deletes_models_without_calling_now_to_perform_the_deletion()
+    {
+        $c = $this->createDeletableCompany();
+
+        Company::newBatch([$c->getKey()])->delete();
+
+        $this->assertSame(0, Company::query()->whereKey($c->getKey())->count());
+    }
+
+    /** @test */
     public function it_deletes_model_instances()
     {
         $c = $this->createDeletableCompany();

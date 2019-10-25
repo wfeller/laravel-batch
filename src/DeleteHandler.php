@@ -5,8 +5,6 @@ namespace WF\Batch;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Class DeleteHandler
- * @package WF\Batch
  * @internal
  */
 final class DeleteHandler extends AbstractHandler
@@ -21,7 +19,7 @@ final class DeleteHandler extends AbstractHandler
         return $this;
     }
 
-    public function handle() : array
+    protected function performAction() : array
     {
         $this->settings = new Settings($this->batch);
 

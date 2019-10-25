@@ -6,13 +6,13 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
 /**
- * Class AbstractHandler
- * @package WF\Batch
  * @internal
  */
 abstract class AbstractHandler implements ShouldQueue
 {
     use Queueable;
+
+    private $wasDispatched = false;
 
     protected $batch;
 
@@ -23,6 +23,8 @@ abstract class AbstractHandler implements ShouldQueue
 
     public function dispatch() : void
     {
+        $this->wasDispatched = true;
+
         dispatch($this);
     }
 
@@ -31,5 +33,19 @@ abstract class AbstractHandler implements ShouldQueue
         return $this->handle();
     }
 
-    abstract public function handle() : array;
+    public function __destruct()
+    {
+        if (! $this->wasDispatched) {
+            $this->handle();
+        }
+    }
+
+    public function handle() : array
+    {
+        $this->wasDispatched = true;
+
+        return $this->performAction();
+    }
+
+    abstract protected function performAction() : array;
 }

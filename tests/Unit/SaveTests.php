@@ -57,6 +57,23 @@ trait SaveTests
     }
 
     /** @test */
+    public function it_perform_the_save_without_calling_now_to_perform_the_save()
+    {
+        $company = [
+            'id' => 1,
+            'name' => 'one',
+            'address' => '123 some street',
+            'address_2' => 'really important delivery details',
+            'city' => 'my city',
+            'country_code' => 'us',
+        ];
+
+        Batch::of(Company::class, [$company])->save();
+
+        $this->assertEquals($company, Company::query()->find(1)->only(array_keys($company)));
+    }
+
+    /** @test */
     public function model_properties_are_correctly_updated_on_save()
     {
         $c = new Car($this->newAttributes());
