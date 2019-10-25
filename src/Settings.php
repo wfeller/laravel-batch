@@ -2,17 +2,13 @@
 
 namespace WF\Batch;
 
-use Illuminate\Database\Eloquent\Model;
-
 /**
- * Class Settings
- * @package WF\Batch
  * @internal
  */
 final class Settings
 {
     public $class;
-    /** @var Model */
+    /** @var \Illuminate\Database\Eloquent\Model */
     public $model;
     private $columns = null;
 
