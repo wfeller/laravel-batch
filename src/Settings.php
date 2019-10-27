@@ -7,10 +7,11 @@ namespace WF\Batch;
  */
 final class Settings
 {
+    private static $columns = [];
+
     public $class;
     /** @var \Illuminate\Database\Eloquent\Model */
     public $model;
-    private $columns = null;
 
     public $table;
     public $keyName;
@@ -43,8 +44,8 @@ final class Settings
 
     public function getColumns() : array
     {
-        if (null === $this->columns) {
-            $this->columns = array_filter(
+        if (! isset(self::$columns[$this->class])) {
+            self::$columns[$this->class] = array_filter(
                 $this->model->getConnection()->getSchemaBuilder()->getColumnListing($this->table),
                 function ($value) {
                     return $value !== $this->keyName;
@@ -52,6 +53,6 @@ final class Settings
             );
         }
 
-        return $this->columns;
+        return self::$columns[$this->class];
     }
 }
