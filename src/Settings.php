@@ -47,7 +47,7 @@ final class Settings
         if (! isset(self::$columns[$this->class])) {
             self::$columns[$this->class] = array_filter(
                 $this->model->getConnection()->getSchemaBuilder()->getColumnListing($this->table),
-                function ($value) {
+                function ($value) : bool {
                     return $value !== $this->keyName;
                 }
             );
