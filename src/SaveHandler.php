@@ -163,7 +163,8 @@ final class SaveHandler extends AbstractHandler
             && false === $this->fireModelEvent($model, 'updating', true)
         ) {
             return false;
-        } elseif ($this->settings->events['creating']
+        } elseif (! $model->exists
+            && $this->settings->events['creating']
             && false === $this->fireModelEvent($model, 'creating', true)
         ) {
             return false;
