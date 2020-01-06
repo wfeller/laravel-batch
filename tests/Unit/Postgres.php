@@ -4,7 +4,6 @@ namespace WF\Batch\Tests\Unit;
 
 use WF\Batch\Tests\Models\Car;
 use WF\Batch\Tests\TestCase;
-use WF\Batch\Updater\PostgresUpdater;
 
 class Postgres extends TestCase
 {
@@ -17,12 +16,6 @@ class Postgres extends TestCase
     {
         $this->supportsTimezones = false;
         parent::setUp();
-    }
-
-    protected function getEnvironmentSetUp($app)
-    {
-        PostgresUpdater::registerRareTypes();
-        parent::getEnvironmentSetUp($app);
     }
 
     protected function databaseDriver() : array
