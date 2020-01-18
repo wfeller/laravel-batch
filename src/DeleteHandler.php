@@ -151,7 +151,7 @@ final class DeleteHandler extends AbstractHandler
 
     private function hasAnyDeletionEvents() : bool
     {
-        return $this->settings->events['deleting']
+        return $this->settings->events['deleted']
             || $this->settings->events['deleting']
             || ($this->settings->events['forceDeleted'] && $this->forceDelete);
     }
