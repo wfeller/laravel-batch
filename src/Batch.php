@@ -28,6 +28,11 @@ final class Batch
         return new self($models, $class);
     }
 
+    public function isEmpty() : bool
+    {
+        return count($this->models) === 0;
+    }
+
     public function batchSize(int $batchSize) : self
     {
         if ($batchSize <= 0) {

@@ -44,6 +44,10 @@ abstract class AbstractHandler implements ShouldQueue
     {
         $this->wasDispatched = true;
 
+        if ($this->batch->isEmpty()) {
+            return [];
+        }
+
         return $this->performAction();
     }
 
