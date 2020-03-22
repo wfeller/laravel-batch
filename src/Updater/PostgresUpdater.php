@@ -7,9 +7,9 @@ use WF\Batch\Settings;
 
 final class PostgresUpdater implements Updater
 {
-    private $keyCast;
-    private static $castTypes = [];
-    private static $casts = [
+    private string $keyCast;
+    private static array $castTypes = [];
+    private static array $casts = [
         'smallint'      => '::integer',
         'integer'       => '::integer',
         'bigint'        => '::integer',

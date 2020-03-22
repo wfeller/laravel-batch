@@ -2,6 +2,11 @@
 
 namespace WF\Batch;
 
+use DateTimeInterface;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\Connection;
+use Illuminate\Database\Eloquent\Model;
+
 /**
  * @internal
  */
@@ -9,20 +14,19 @@ final class Settings
 {
     private static $columns = [];
 
-    public $class;
-    /** @var \Illuminate\Database\Eloquent\Model */
-    public $model;
+    public string $class;
+    public Model $model;
 
-    public $table;
-    public $keyName;
-    public $keyType;
-    public $usesTimestamps;
+    public string $table;
+    public string $keyName;
+    public string $keyType;
+    public bool $usesTimestamps;
 
-    public $now;
-    public $dbConnection;
-    public $dispatcher;
+    public DateTimeInterface $now;
+    public Connection $dbConnection;
+    public Dispatcher $dispatcher;
 
-    public $events = [];
+    public array $events = [];
 
     public function __construct(Batch $batch)
     {

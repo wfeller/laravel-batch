@@ -7,9 +7,9 @@ use WF\Batch\Exceptions\BatchException;
 
 final class Batch
 {
-    private $models;
-    private $class;
-    private $batchSize = 500;
+    private array $models;
+    private string $class;
+    private int $batchSize = 500;
 
     public function __construct(iterable $models, string $class)
     {

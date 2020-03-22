@@ -12,9 +12,9 @@ abstract class AbstractHandler implements ShouldQueue
 {
     use Queueable;
 
-    private $wasDispatched = false;
+    private bool $wasDispatched = false;
 
-    protected $batch;
+    protected Batch $batch;
 
     public function __construct(Batch $batch)
     {

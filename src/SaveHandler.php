@@ -11,10 +11,8 @@ use WF\Batch\Exceptions\BatchException;
  */
 final class SaveHandler extends AbstractHandler
 {
-    /** @var Settings */
-    private $settings;
-    /** @var Updater\Updater */
-    private $updater;
+    private Settings $settings;
+    private Updater\Updater $updater;
 
     private static $updaters = [
         'pgsql' => Updater\PostgresUpdater::class,
@@ -83,9 +81,7 @@ final class SaveHandler extends AbstractHandler
     private function batchUpdate(array $models) : array
     {
         foreach ($this->settings->getColumns() as $column) {
-            $updated = array_filter($models, static function ($model) use ($column) : bool {
-                return array_key_exists($column, $model);
-            });
+            $updated = array_filter($models, static fn ($model) : bool => array_key_exists($column, $model));
 
             if (empty($updated)) {
                 continue;
@@ -193,6 +189,7 @@ final class SaveHandler extends AbstractHandler
     private function fireModelEvent(Model $model, string $event, bool $halt = true)
     {
         $method = $halt ? 'until' : 'dispatch';
+
         return $this->settings->dispatcher->{$method}("eloquent.{$event}: {$this->settings->class}", $model);
     }
 }

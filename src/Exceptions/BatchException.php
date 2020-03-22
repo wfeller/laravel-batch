@@ -37,9 +37,4 @@ class BatchException extends RuntimeException
     {
         return new self("Invalid array size '{$actual}', expected '{$expected}'.");
     }
-
-    public static function missingPostgresTypesDependency() : self
-    {
-        return new self('Missing opensoft/doctrine-postgres-types');
-    }
 }

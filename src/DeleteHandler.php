@@ -9,13 +9,13 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class DeleteHandler extends AbstractHandler
 {
-    /** @var Settings */
-    private $settings;
-    private $forceDelete = false;
+    private Settings $settings;
+    private bool $forceDelete = false;
 
     public function force(bool $forceDelete = true) : self
     {
         $this->forceDelete = $forceDelete;
+
         return $this;
     }
 
