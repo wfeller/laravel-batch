@@ -76,7 +76,7 @@ Car::newBatch($cars)->save()->now();
 Batch::of(Car::class, $cars)->save()->now();
 ```
 
-### Some kind of benchmarks
+### Benchmarks
 
 **These benchmarks are not accurate, but they give some kind of rough idea of the potential performance improvement or usefulness of this package.**
 
