@@ -14,7 +14,7 @@ final class SaveHandler extends AbstractHandler
     private Settings $settings;
     private Updater\Updater $updater;
 
-    private static $updaters = [
+    private static array $updaters = [
         'pgsql' => Updater\PostgresUpdater::class,
         'mysql' => Updater\GenericUpdater::class,
         'sqlite' => Updater\GenericUpdater::class,

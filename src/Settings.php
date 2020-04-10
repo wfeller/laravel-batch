@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class Settings
 {
-    private static $columns = [];
+    private static array $columns = [];
 
     public string $class;
     public Model $model;
