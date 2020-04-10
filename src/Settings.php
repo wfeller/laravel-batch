@@ -26,7 +26,9 @@ final class Settings
     public Connection $dbConnection;
     public Dispatcher $dispatcher;
 
+    public array $dispatchableEvents = [];
     public array $events = [];
+    public array $customEvents = [];
 
     public function __construct(Batch $batch)
     {
@@ -41,9 +43,35 @@ final class Settings
         $this->dbConnection = $this->model->getConnection();
         $this->dispatcher = $this->model->getEventDispatcher();
 
+        $dispatchesEvents = $this->getDispatchesEvents();
+
         foreach ($this->model->getObservableEvents() as $type) {
             $this->events[$type] = $this->dispatcher->hasListeners("eloquent.{$type}: {$this->class}");
+            $this->customEvents[$type] = $this->customEventFor($type, $dispatchesEvents);
+
+            $this->dispatchableEvents[$type] = $this->events[$type] || $this->customEvents[$type];
         }
+    }
+
+    private function getDispatchesEvents() : array
+    {
+        $reflectionProperty = new \ReflectionProperty($this->model, 'dispatchesEvents');
+        $reflectionProperty->setAccessible(true);
+
+        return $reflectionProperty->getValue($this->model);
+    }
+
+    private function customEventFor(string $event, array $dispatchesEvents)
+    {
+        if (! isset($dispatchesEvents[$event])) {
+            return false;
+        }
+
+        if (! $this->dispatcher->hasListeners($dispatchesEvents[$event])) {
+            return false;
+        }
+
+        return $dispatchesEvents[$event];
     }
 
     public function getColumns() : array

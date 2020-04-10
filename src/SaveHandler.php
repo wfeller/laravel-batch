@@ -11,6 +11,8 @@ use WF\Batch\Exceptions\BatchException;
  */
 final class SaveHandler extends AbstractHandler
 {
+    use FiresEvents;
+
     private Settings $settings;
     private Updater\Updater $updater;
 
@@ -140,6 +142,7 @@ final class SaveHandler extends AbstractHandler
             if (! $model->exists) {
                 $model->setCreatedAt($this->settings->now);
             }
+
             $model->setUpdatedAt($this->settings->now);
         }
 
@@ -148,19 +151,19 @@ final class SaveHandler extends AbstractHandler
 
     private function firePreInsertModelEvents(Model $model) : bool
     {
-        if ($this->settings->events['saving']
+        if ($this->settings->dispatchableEvents['saving']
             && false === $this->fireModelEvent($model, 'saving', true)
         ) {
             return false;
         }
 
         if ($model->exists
-            && $this->settings->events['updating']
+            && $this->settings->dispatchableEvents['updating']
             && false === $this->fireModelEvent($model, 'updating', true)
         ) {
             return false;
         } elseif (! $model->exists
-            && $this->settings->events['creating']
+            && $this->settings->dispatchableEvents['creating']
             && false === $this->fireModelEvent($model, 'creating', true)
         ) {
             return false;
@@ -174,22 +177,15 @@ final class SaveHandler extends AbstractHandler
         foreach ($finalModels as $model) {
             $model->exists = true;
 
-            if ($model->wasRecentlyCreated && $this->settings->events['created']) {
+            if ($model->wasRecentlyCreated && $this->settings->dispatchableEvents['created']) {
                 $this->fireModelEvent($model, 'created', false);
-            } elseif ($this->settings->events['updated']) {
+            } elseif ($this->settings->dispatchableEvents['updated']) {
                 $this->fireModelEvent($model, 'updated', false);
             }
 
-            if ($this->settings->events['saved']) {
+            if ($this->settings->dispatchableEvents['saved']) {
                 $this->fireModelEvent($model, 'saved', false);
             }
         }
-    }
-
-    private function fireModelEvent(Model $model, string $event, bool $halt = true)
-    {
-        $method = $halt ? 'until' : 'dispatch';
-
-        return $this->settings->dispatcher->{$method}("eloquent.{$event}: {$this->settings->class}", $model);
     }
 }

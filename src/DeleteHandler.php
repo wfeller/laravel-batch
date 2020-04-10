@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class DeleteHandler extends AbstractHandler
 {
+    use FiresEvents;
+
     private Settings $settings;
     private bool $forceDelete = false;
 
@@ -71,7 +73,7 @@ final class DeleteHandler extends AbstractHandler
             return $this->extractAndFilterModelKeys($models);
         }
 
-        if (! $this->settings->events['deleting']) {
+        if (! $this->settings->dispatchableEvents['deleting']) {
             return $this->refreshModels($models);
         }
 
@@ -130,29 +132,24 @@ final class DeleteHandler extends AbstractHandler
 
     private function firePostDeleteEvents(array $models) : void
     {
-        if ($this->settings->events['deleted'] || ($this->forceDelete && $this->settings->events['forceDeleted'])) {
+        if ($this->settings->dispatchableEvents['deleted']
+            || ($this->forceDelete && $this->settings->dispatchableEvents['forceDeleted'])) {
             foreach ($models as $model) {
-                if ($this->settings->events['deleted']) {
+                if ($this->settings->dispatchableEvents['deleted']) {
                     $this->fireModelEvent($model, 'deleted', false);
                 }
 
-                if ($this->forceDelete && $this->settings->events['forceDeleted']) {
+                if ($this->forceDelete && $this->settings->dispatchableEvents['forceDeleted']) {
                     $this->fireModelEvent($model, 'forceDeleted', false);
                 }
             }
         }
     }
 
-    private function fireModelEvent(Model $model, string $event, bool $halt = true)
-    {
-        $method = $halt ? 'until' : 'dispatch';
-        return $this->settings->dispatcher->{$method}("eloquent.{$event}: {$this->settings->class}", $model);
-    }
-
     private function hasAnyDeletionEvents() : bool
     {
-        return $this->settings->events['deleted']
-            || $this->settings->events['deleting']
-            || ($this->settings->events['forceDeleted'] && $this->forceDelete);
+        return $this->settings->dispatchableEvents['deleted']
+            || $this->settings->dispatchableEvents['deleting']
+            || ($this->settings->dispatchableEvents['forceDeleted'] && $this->forceDelete);
     }
 }

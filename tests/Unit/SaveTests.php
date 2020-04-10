@@ -2,20 +2,22 @@
 
 namespace WF\Batch\Tests\Unit;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use WF\Batch\Batch;
 use WF\Batch\Exceptions\BatchException;
 use WF\Batch\SaveHandler;
 use WF\Batch\Tests\Models\Car;
 use WF\Batch\Tests\Models\Company;
+use WF\Batch\Tests\Models\ModelWithCustomEvents;
+use WF\Batch\Tests\Models\TestModel;
 use WF\Batch\Tests\Models\ModelWithoutBatchableTrait;
 use WF\Batch\Tests\Models\User;
 
 trait SaveTests
 {
-    protected $supportsTimezones = false;
-
     /** @test */
     public function updaters_must_implement_the_interface()
     {
@@ -28,6 +30,104 @@ trait SaveTests
     {
         $this->expectException(BatchException::class);
         Car::batchSave([new User]);
+    }
+
+    /** @test */
+    public function it_fires_model_events_when_saving()
+    {
+        $existingModel = new TestModel;
+        $existingModel->save();
+        $existingModel = $existingModel->fresh();
+
+        $events = Arr::shuffle(['saving', 'saved', 'updating', 'updated', 'creating', 'created']);
+
+        $listeningTo = [array_shift($events), array_shift($events), array_shift($events)];
+        $notListeningTo = $events;
+
+        foreach ($listeningTo as $event) {
+            TestModel::{$event}(fn () => null);
+        }
+
+        $events = Event::fake();
+
+        $existingModel->id = $existingModel->id + 1;
+
+        Batch::of(TestModel::class, [new TestModel, $existingModel])->save()->now();
+
+        foreach ($listeningTo as $event) {
+            $events->assertDispatched("eloquent.{$event}: ".TestModel::class);
+        }
+
+        foreach ($notListeningTo as $event) {
+            $events->assertNotDispatched("eloquent.{$event}: ".TestModel::class);
+        }
+    }
+
+    /** @test */
+    public function it_fires_custom_save_model_events()
+    {
+        $existingModel = new ModelWithCustomEvents();
+        $existingModel->save();
+        $existingModel = $existingModel->fresh();
+
+        $customEvents = Arr::shuffle(Arr::except($existingModel->getCustomEvents(), ['deleting', 'deleted', 'forceDeleted']));
+
+        $listeningTo = [array_shift($customEvents), array_shift($customEvents), array_shift($customEvents)];
+        $notListeningTo = $customEvents;
+
+        Event::listen($listeningTo, fn () => null);
+
+        $events = Event::fake();
+
+        $existingModel->id = $existingModel->id + 1;
+
+        Batch::of(ModelWithCustomEvents::class, [new ModelWithCustomEvents, $existingModel])->save()->now();
+
+        foreach ($listeningTo as $event) {
+            $events->assertDispatched($event);
+        }
+
+        foreach ($notListeningTo as $event) {
+            $events->assertNotDispatched($event);
+        }
+    }
+
+    /** @test */
+    public function it_doesnt_fire_events_if_no_saving_listeners()
+    {
+        $existingModel = new TestModel;
+        $existingModel->save();
+        $existingModel = $existingModel->fresh();
+
+        $modelEvents = ['saving', 'saved', 'creating', 'created', 'updating', 'updated'];
+
+        $events = Event::fake();
+
+        $existingModel->id = $existingModel->id + 1;
+
+        Batch::of(TestModel::class, [new TestModel, $existingModel])->save()->now();
+
+        foreach ($modelEvents as $event) {
+            $events->assertNotDispatched("eloquent.{$event}: ".TestModel::class);
+        }
+    }
+
+    /** @test */
+    public function it_doesnt_fires_custom_save_model_events_if_no_listeners()
+    {
+        $existingModel = new ModelWithCustomEvents();
+        $existingModel->save();
+        $existingModel = $existingModel->fresh();
+
+        $events = Event::fake();
+
+        $existingModel->id = $existingModel->id + 1;
+
+        Batch::of(ModelWithCustomEvents::class, [new ModelWithCustomEvents, $existingModel])->save()->now();
+
+        foreach ((new ModelWithCustomEvents)->getCustomEvents() as $event) {
+            $events->assertNotDispatched($event);
+        }
     }
 
     /** @test */
@@ -251,7 +351,7 @@ trait SaveTests
             'char' => 'a',
             'date' => '2019-01-01',
             'datetime' => '2019-01-01 01:00:00',
-            'datetime_tz' => $this->supportsTimezones
+            'datetime_tz' => $this->supportsTimezones()
                 ? '2019-01-01 01:00:00+01'
                 : '2019-01-01 01:00:00',
             'decimal' => 1.20,
@@ -278,9 +378,9 @@ trait SaveTests
             'string' => 'hello',
             'text' => 'hello',
             'time' => '01:00:00',
-            'time_tz' => $this->supportsTimezones ? '01:00:00+01' : '01:00:00',
+            'time_tz' => $this->supportsTimezones() ? '01:00:00+01' : '01:00:00',
             'timestamp' => '2019-01-01 01:00:00',
-            'timestamp_tz' => $this->supportsTimezones
+            'timestamp_tz' => $this->supportsTimezones()
                 ? '2019-01-01 01:00:00+01'
                 : '2019-01-01 01:00:00',
             'tiny_integer' => true,
@@ -305,7 +405,7 @@ trait SaveTests
             'char' => 'b',
             'date' => '2019-01-02',
             'datetime' => '2019-01-02 01:00:00',
-            'datetime_tz' => $this->supportsTimezones
+            'datetime_tz' => $this->supportsTimezones()
                 ? '2019-01-02 01:00:00+01'
                 : '2019-01-02 01:00:00',
             'decimal' => 1.21,
@@ -332,9 +432,9 @@ trait SaveTests
             'string' => 'hello world',
             'text' => 'hello world',
             'time' => '02:00:00',
-            'time_tz' => $this->supportsTimezones ? '02:00:00+01' : '02:00:00',
+            'time_tz' => $this->supportsTimezones() ? '02:00:00+01' : '02:00:00',
             'timestamp' => '2019-01-02 01:00:00',
-            'timestamp_tz' => $this->supportsTimezones
+            'timestamp_tz' => $this->supportsTimezones()
                 ? '2019-01-02 01:00:00+01'
                 : '2019-01-02 01:00:00',
             'tiny_integer' => false,

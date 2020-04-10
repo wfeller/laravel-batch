@@ -4,7 +4,7 @@ namespace WF\Batch\Tests\Unit;
 
 use WF\Batch\Tests\TestCase;
 
-class Sqlite extends TestCase
+class SqliteTest extends TestCase
 {
     use SaveTests, DeleteTests;
 

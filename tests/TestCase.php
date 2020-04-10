@@ -34,8 +34,21 @@ abstract class TestCase extends BaseTestCase
         $app['config']->set('database.connections.testbench', $this->databaseDriver());
     }
 
+    protected function supportsTimezones()
+    {
+        $connection = $this->app['config']->get('database.default');
+
+        return $this->app['config']->get('database.connections.'.$connection.'.driver') != 'sqlite';
+    }
+
     public function runMigrations()
     {
+        Schema::dropIfExists('test_models');
+        Schema::create('test_models', function (Blueprint $table) {
+            $table->id();
+            $table->timestamps();
+        });
+
         Schema::dropIfExists((new Company)->getTable());
         Schema::create((new Company)->getTable(), function (Blueprint $table) {
             $table->bigIncrements('id');

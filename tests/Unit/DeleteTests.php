@@ -2,10 +2,15 @@
 
 namespace WF\Batch\Tests\Unit;
 
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use WF\Batch\Batch;
 use WF\Batch\DeleteHandler;
 use WF\Batch\Exceptions\BatchException;
 use WF\Batch\Tests\Models\Company;
+use WF\Batch\Tests\Models\ModelWithCustomEvents;
+use WF\Batch\Tests\Models\TestModel;
 use WF\Batch\Tests\Models\User;
 
 trait DeleteTests
@@ -21,6 +26,89 @@ trait DeleteTests
     {
         $c = $this->createDeletableCompany();
         $this->assertEquals([$c->getKey()], Company::newBatch([$c->getKey()])->delete()->now());
+    }
+
+    /** @test */
+    public function it_fires_model_events_when_deleting()
+    {
+        $existingModel = new TestModel;
+        $existingModel->save();
+        $existingModel = $existingModel->fresh();
+
+        $events = Arr::shuffle(['deleting', 'deleted']);
+
+        $listeningTo = array_shift($events);
+        $notListeningTo = array_shift($events);
+
+        TestModel::{$listeningTo}(fn () => null);
+
+        $events = Event::fake();
+
+        Batch::of(TestModel::class, [$existingModel])->delete()->now();
+
+        $events->assertDispatched("eloquent.{$listeningTo}: ".TestModel::class);
+        $events->assertNotDispatched("eloquent.{$notListeningTo}: ".TestModel::class);
+    }
+
+    /** @test */
+    public function it_fires_custom_delete_model_events()
+    {
+        $existingModel = new ModelWithCustomEvents();
+        $existingModel->save();
+        $existingModel = $existingModel->fresh();
+
+        $customEvents = Arr::shuffle(Arr::only($existingModel->getCustomEvents(), ['deleting', 'deleted', 'forceDeleted']));
+
+        $listeningTo = [array_shift($customEvents), array_shift($customEvents)];
+        $notListeningTo = $customEvents;
+
+        Event::listen($listeningTo, fn () => null);
+
+        $events = Event::fake();
+
+        Batch::of(ModelWithCustomEvents::class, [$existingModel])->delete()->force()->now();
+
+        foreach ($listeningTo as $event) {
+            $events->assertDispatched($event);
+        }
+
+        foreach ($notListeningTo as $event) {
+            $events->assertNotDispatched($event);
+        }
+    }
+
+    /** @test */
+    public function it_doesnt_fire_events_if_no_deleting_listeners()
+    {
+        $existingModel = new TestModel;
+        $existingModel->save();
+        $existingModel = $existingModel->fresh();
+
+        $modelEvents = ['deleting', 'deleted', 'forceDeleting'];
+
+        $events = Event::fake();
+
+        Batch::of(TestModel::class, [$existingModel])->delete()->force()->now();
+
+        foreach ($modelEvents as $event) {
+            $events->assertNotDispatched("eloquent.{$event}: ".TestModel::class);
+        }
+    }
+
+    /** @test */
+    public function it_doesnt_fires_custom_deleting_model_events_if_no_listeners()
+    {
+        $existingModel = new ModelWithCustomEvents();
+        $existingModel->save();
+        $existingModel = $existingModel->fresh();
+
+        $events = Event::fake();
+
+        Batch::of(ModelWithCustomEvents::class, [$existingModel])->delete()->force()->now();
+
+        foreach ((new ModelWithCustomEvents)->getCustomEvents() as $event) {
+            $events->assertNotDispatched($event);
+        }
     }
 
     /** @test */
