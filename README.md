@@ -3,10 +3,20 @@
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/wfeller/laravel-batch.svg?style=flat-square)](https://packagist.org/packages/wfeller/laravel-batch)
 [![Total Downloads](https://img.shields.io/packagist/dt/wfeller/laravel-batch.svg?style=flat-square)](https://packagist.org/packages/wfeller/laravel-batch)
+[![Plant Tree](https://img.shields.io/badge/dynamic/json?color=brightgreen&label=Plant%20Tree&query=%24.total&url=https%3A%2F%2Fpublic.offset.earth%2Fusers%2Ftreeware%2Ftrees)](https://plant.treeware.earth/wfeller/laravel-batch)
+[![Buy us a tree](https://img.shields.io/badge/Treeware-%F0%9F%8C%B3-lightgreen?style=for-the-badge)](https://plant.treeware.earth/wfeller/laravel-batch)
 
 This package allows you to save and update models in batch, meaning you can save or
 update many models at the same time, and still fire your events as single saves or
 updates do.
+
+## Licence
+
+This package is [Treeware](https://treeware.earth). If you use it in production, then we ask that you [**buy the world a tree**](https://plant.treeware.earth/wfeller/laravel-batch) to thank us for our work. By contributing to the Treeware forest you’ll be creating employment for local families and restoring wildlife habitats.
+
+You can buy trees here [offset.earth/treeware](https://plant.treeware.earth/{vendor}/{package})
+
+Read more about Treeware at [treeware.earth](http://treeware.earth)
 
 ## Installation
 
@@ -127,7 +137,3 @@ If you discover any security related issues, please email me instead of using th
 
 - [William](https://github.com/wfeller)
 - [All Contributors](../../contributors)
-
-## License
-
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
