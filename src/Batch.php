@@ -9,7 +9,9 @@ final class Batch
 {
     private array $models;
     private string $class;
-    private int $batchSize = 500;
+    private int $batchSize;
+
+    private static int $defaultBatchSize = 500;
 
     public function __construct(iterable $models, string $class)
     {
@@ -19,6 +21,7 @@ final class Batch
 
         $this->models = is_array($models) ? $models : iterator_to_array($models, false);
         $this->class = $class;
+        $this->batchSize = self::getDefaultBatchSize();
 
         $this->verifyModels();
     }
@@ -26,6 +29,20 @@ final class Batch
     public static function of(string $class, iterable $models) : self
     {
         return new self($models, $class);
+    }
+
+    public static function getDefaultBatchSize() : int
+    {
+        return self::$defaultBatchSize;
+    }
+
+    public static function setDefaultBatchSize(int $batchSize) : void
+    {
+        if ($batchSize <= 0) {
+            throw BatchException::batchSize($batchSize);
+        }
+
+        self::$defaultBatchSize = $batchSize;
     }
 
     public function isEmpty() : bool
