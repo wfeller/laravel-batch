@@ -186,6 +186,8 @@ final class SaveHandler extends AbstractHandler
             if ($this->settings->dispatchableEvents['saved']) {
                 $this->fireModelEvent($model, 'saved', false);
             }
+
+            $model->syncOriginal();
         }
     }
 }
