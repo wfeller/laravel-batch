@@ -336,10 +336,36 @@ trait SaveTests
         $this->assertEquals($companyAttributes, $company->only(array_keys($companyAttributes)));
 
         $company->name = 'two';
+        $this->assertTrue($company->isDirty());
         Company::batchSave([$company]);
 
         $this->assertSame('two', $company->name);
         $this->assertSame('two', $company->getOriginal('name'));
+        $this->assertFalse($company->isDirty());
+    }
+
+    /** @test */
+    public function it_syncs_changes_after_update()
+    {
+        $companyAttributes = [
+            'id' => 1,
+            'name' => 'one',
+            'address' => '123 some street',
+            'address_2' => 'really important delivery details',
+            'city' => 'my city',
+            'country_code' => 'us',
+        ];
+
+        Company::batchSave([$companyAttributes]);
+
+        $company = Company::query()->find(1);
+        $this->assertEquals($companyAttributes, $company->only(array_keys($companyAttributes)));
+
+        $company->name = 'two';
+        Company::batchSave([$company]);
+
+        $this->assertSame('two', $company->name);
+        $this->assertSame(['name' => 'two'], $company->getChanges());
     }
 
     protected function formatCar(Car $car) : array

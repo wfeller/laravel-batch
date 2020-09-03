@@ -179,8 +179,14 @@ final class SaveHandler extends AbstractHandler
 
             if ($model->wasRecentlyCreated && $this->settings->dispatchableEvents['created']) {
                 $this->fireModelEvent($model, 'created', false);
-            } elseif ($this->settings->dispatchableEvents['updated']) {
-                $this->fireModelEvent($model, 'updated', false);
+            }
+
+            if (! $model->wasRecentlyCreated) {
+                $model->syncChanges();
+
+                if ($this->settings->dispatchableEvents['updated']) {
+                    $this->fireModelEvent($model, 'updated', false);
+                }
             }
 
             if ($this->settings->dispatchableEvents['saved']) {
