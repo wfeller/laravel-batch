@@ -113,17 +113,27 @@ final class SaveHandler extends AbstractHandler
         [$createModels, $updateModels, $finalModels] = [[], [], []];
 
         foreach ($modelsChunk as $model) {
-            $model = $this->prepareModel($model);
+            $model = $model instanceof Model ? $model : $this->settings->model->newInstance()->forceFill($model);
 
-            if (! $this->firePreInsertModelEvents($model)) {
+            $dirty = $model->isDirty();
+
+            if (! $this->firePreInsertModelEvents($model, $dirty)) {
                 continue;
             }
 
-            if ($model->exists) {
-                $updateModels[] = $model->getDirty() + [$this->settings->keyName => $model->getKey()];
-            } else {
+            if ($this->settings->usesTimestamps && (! $model->exists || $dirty)) {
+                if (! $model->exists) {
+                    $model->setCreatedAt($this->settings->now);
+                }
+
+                $model->setUpdatedAt($this->settings->now);
+            }
+
+            if (! $model->exists) {
                 $model->wasRecentlyCreated = true;
                 $createModels[] = $model->getAttributes();
+            } elseif ($dirty) {
+                $updateModels[] = $model->getDirty() + [$this->settings->keyName => $model->getKey()];
             }
 
             $finalModels[] = $model;
@@ -132,24 +142,7 @@ final class SaveHandler extends AbstractHandler
         return [$createModels, $updateModels, $finalModels];
     }
 
-    private function prepareModel($model) : Model
-    {
-        if (! $model instanceof Model) {
-            $model = $this->settings->model->newInstance()->forceFill($model);
-        }
-
-        if ($this->settings->usesTimestamps) {
-            if (! $model->exists) {
-                $model->setCreatedAt($this->settings->now);
-            }
-
-            $model->setUpdatedAt($this->settings->now);
-        }
-
-        return $model;
-    }
-
-    private function firePreInsertModelEvents(Model $model) : bool
+    private function firePreInsertModelEvents(Model $model, bool $dirty) : bool
     {
         if ($this->settings->dispatchableEvents['saving']
             && false === $this->fireModelEvent($model, 'saving', true)
@@ -158,6 +151,7 @@ final class SaveHandler extends AbstractHandler
         }
 
         if ($model->exists
+            && $dirty
             && $this->settings->dispatchableEvents['updating']
             && false === $this->fireModelEvent($model, 'updating', true)
         ) {
@@ -181,7 +175,7 @@ final class SaveHandler extends AbstractHandler
                 $this->fireModelEvent($model, 'created', false);
             }
 
-            if (! $model->wasRecentlyCreated) {
+            if (! $model->wasRecentlyCreated && $model->isDirty()) {
                 $model->syncChanges();
 
                 if ($this->settings->dispatchableEvents['updated']) {

@@ -368,6 +368,37 @@ trait SaveTests
         $this->assertSame(['name' => 'two'], $company->getChanges());
     }
 
+    /** @test */
+    public function it_doesnt_perform_update_on_clean_models()
+    {
+        $companyAttributes = [
+            'id' => 1,
+            'name' => 'one',
+            'address' => '123 some street',
+            'address_2' => 'really important delivery details',
+            'city' => 'my city',
+            'country_code' => 'us',
+        ];
+
+        Company::batchSave([$companyAttributes]);
+
+        $company = Company::query()->find(1);
+
+        Company::saving(fn () => true);
+        Company::saved(fn () => true);
+        Company::updated(fn () => true);
+        Company::updating(fn () => true);
+
+        $events = Event::fake();
+
+        Company::batchSave([$company]);
+
+        $events->assertNotDispatched('eloquent.updating: '.Company::class);
+        $events->assertNotDispatched('eloquent.updated: '.Company::class);
+        $events->assertDispatchedTimes('eloquent.saving: '.Company::class, 1);
+        $events->assertDispatchedTimes('eloquent.saved: '.Company::class, 1);
+    }
+
     protected function formatCar(Car $car) : array
     {
         return $car->attributesToArray();
