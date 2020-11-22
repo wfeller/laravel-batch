@@ -6,6 +6,7 @@ use DateTimeInterface;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
+use WF\Batch\Traits\RemembersBatchState;
 
 /**
  * @internal
@@ -21,6 +22,7 @@ final class Settings
     public string $keyName;
     public string $keyType;
     public bool $usesTimestamps;
+    public bool $remembersBatchState;
 
     public DateTimeInterface $now;
     public Connection $dbConnection;
@@ -39,6 +41,7 @@ final class Settings
         $this->keyName = $this->model->getKeyName();
         $this->keyType = $this->model->getKeyType();
         $this->usesTimestamps = $this->model->usesTimestamps();
+        $this->remembersBatchState = isset(class_uses_recursive($this->model)[RemembersBatchState::class]);
         $this->now = $this->model->freshTimestamp();
         $this->dbConnection = $this->model->getConnection();
         $this->dispatcher = $this->model->getEventDispatcher();

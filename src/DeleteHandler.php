@@ -3,6 +3,9 @@
 namespace WF\Batch;
 
 use Illuminate\Database\Eloquent\Model;
+use WF\Batch\Events\BatchDeleted;
+use WF\Batch\Events\BatchDeleting;
+use WF\Batch\Traits\RemembersBatchState;
 
 /**
  * @internal
@@ -30,6 +33,8 @@ final class DeleteHandler extends AbstractHandler
         foreach ($this->batch->getChunks() as $chunk) {
             $modelInstances = $this->prepareModels($chunk);
 
+            event(new BatchDeleting(...$modelInstances));
+
             $this->performDelete($modelKeys = $this->getKeys($modelInstances));
 
             $ids = array_merge($ids, $modelKeys);
@@ -43,19 +48,15 @@ final class DeleteHandler extends AbstractHandler
     private function performDelete(array $keys) : void
     {
         if ($this->forceDelete) {
-            $this->settings->model->newQuery()->whereKey($keys)->forceDelete();
+            $this->settings->model->newQueryWithoutScopes()->whereKey($keys)->forceDelete();
         } else {
             // Soft deleting is taken care of in SoftDeletingScope
-            $this->settings->model->newQuery()->whereKey($keys)->delete();
+            $this->settings->model->newQueryWithoutScopes()->whereKey($keys)->delete();
         }
     }
 
     private function getKeys(array $models) : array
     {
-        if (! $this->hasAnyDeletionEvents()) {
-            return $models;
-        }
-
         $keys = [];
 
         foreach ($models as $model) {
@@ -69,17 +70,21 @@ final class DeleteHandler extends AbstractHandler
     {
         $this->removeNotExistingModels($models);
 
-        if (! $this->hasAnyDeletionEvents()) {
-            return $this->extractAndFilterModelKeys($models);
+        $models = $this->refreshModels($models);
+
+        if ($this->settings->remembersBatchState) {
+            foreach ($models as $model) {
+                $model->startBatchDelete();
+            }
         }
 
         if (! $this->settings->dispatchableEvents['deleting']) {
-            return $this->refreshModels($models);
+            return $models;
         }
 
         $filteredModels = [];
 
-        foreach ($this->refreshModels($models) as $model) {
+        foreach ($models as $model) {
             if (false !== $this->fireModelEvent($model, 'deleting', true)) {
                 $filteredModels[] = $model;
             }
@@ -97,21 +102,6 @@ final class DeleteHandler extends AbstractHandler
         }
     }
 
-    private function extractAndFilterModelKeys(array $models) : array
-    {
-        $keys = [];
-
-        foreach ($models as $model) {
-            if ($model instanceof Model) {
-                $keys[] = $model->getKey();
-            } else {
-                $keys[] = $model;
-            }
-        }
-
-        return $this->settings->model->newQuery()->whereKey($keys)->pluck($this->settings->keyName)->all();
-    }
-
     private function refreshModels(array $models) : array
     {
         $missing = [];
@@ -124,7 +114,7 @@ final class DeleteHandler extends AbstractHandler
         }
 
         if (! empty($missing)) {
-            return array_merge($models, $this->settings->model->newQuery()->findMany($missing)->all());
+            return array_merge($models, $this->settings->model->newQueryWithoutScopes()->findMany($missing)->all());
         }
 
         return $models;
@@ -144,12 +134,7 @@ final class DeleteHandler extends AbstractHandler
                 }
             }
         }
-    }
 
-    private function hasAnyDeletionEvents() : bool
-    {
-        return $this->settings->dispatchableEvents['deleted']
-            || $this->settings->dispatchableEvents['deleting']
-            || ($this->settings->dispatchableEvents['forceDeleted'] && $this->forceDelete);
+        event(new BatchDeleted(...$models));
     }
 }

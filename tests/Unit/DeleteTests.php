@@ -124,8 +124,12 @@ trait DeleteTests
     /** @test */
     public function it_deletes_model_instances()
     {
-        $c = $this->createDeletableCompany();
-        $this->assertEquals([$c->getKey()], Company::newBatch([$c])->delete()->now());
+        $one = $this->createDeletableCompany();
+        $two = $this->createDeletableCompany();
+        $this->assertEquals([$one->getKey(), $two->getKey()], Company::newBatch([$one, $two->getKey()])->delete()->now());
+
+        $this->assertTrue($one->batchDeleting);
+        $this->assertFalse($two->batchDeleting);
     }
 
     /** @test */

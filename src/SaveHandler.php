@@ -121,6 +121,10 @@ final class SaveHandler extends AbstractHandler
                 continue;
             }
 
+            if ($this->settings->remembersBatchState) {
+                $model->startBatchSave();
+            }
+
             if ($this->settings->usesTimestamps && (! $model->exists || $dirty)) {
                 if (! $model->exists) {
                     $model->setCreatedAt($this->settings->now);

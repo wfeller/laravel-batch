@@ -282,6 +282,8 @@ trait SaveTests
         $car = Car::query()->create($this->newAttributes());
         $car->forceFill($this->updateAttributes());
         Car::batchSave([$car, $first, $this->newAttributes()]);
+        $this->assertTrue($car->batchSaving);
+        $this->assertFalse($car->batchDeleting);
         $car->wasRecentlyCreated = false;
         $first->wasRecentlyCreated = false;
         $this->assertEquals(['big_increments' => 1] + $this->carUpdatedAttributes(), $this->formatCar($first->refresh()));
