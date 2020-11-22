@@ -34,7 +34,7 @@ final class DeleteHandler extends AbstractHandler
 
             $modelKeys = $this->getKeys($modelInstances);
 
-            event(new BatchDeleting($this->settings->model, $modelKeys));
+            event(new BatchDeleting($this->settings->model, $modelKeys, $this->forceDelete));
 
             $this->performDelete($modelKeys);
 
@@ -42,7 +42,7 @@ final class DeleteHandler extends AbstractHandler
 
             $this->firePostDeleteEvents($modelInstances);
 
-            event(new BatchDeleted($this->settings->model, $modelKeys));
+            event(new BatchDeleted($this->settings->model, $modelKeys, $this->forceDelete));
         }
 
         return $ids;
