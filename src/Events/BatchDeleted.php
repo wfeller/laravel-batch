@@ -6,11 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class BatchDeleted
 {
-    /** @var array|Model[] */
-    public array $models;
+    public Model $model;
+    public array $modelKeys;
 
-    public function __construct(Model ... $models)
+    public function __construct(Model $model, array $modelKeys)
     {
-        $this->models = $models;
+        $this->model = $model;
+        $this->modelKeys = $modelKeys;
     }
 }

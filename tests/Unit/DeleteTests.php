@@ -128,6 +128,15 @@ trait DeleteTests
         $two = $this->createDeletableCompany();
         $this->assertEquals([$one->getKey(), $two->getKey()], Company::newBatch([$one, $two->getKey()])->delete()->now());
 
+        $this->assertFalse($one->batchDeleting);
+        $this->assertFalse($two->batchDeleting);
+
+        Company::deleting(fn () => true);
+
+        $one = $this->createDeletableCompany();
+        $two = $this->createDeletableCompany();
+        $this->assertEquals([$one->getKey(), $two->getKey()], Company::newBatch([$one, $two->getKey()])->delete()->now());
+
         $this->assertTrue($one->batchDeleting);
         $this->assertFalse($two->batchDeleting);
     }
