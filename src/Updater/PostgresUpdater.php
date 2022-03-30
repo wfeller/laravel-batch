@@ -37,6 +37,17 @@ final class PostgresUpdater implements Updater
 
     public function performUpdate(Settings $settings, string $column, array $values, array $ids) : void
     {
+        if (1 === count($values)) {
+            $settings->dbConnection
+                ->table($settings->table)
+                ->whereIn($settings->keyName, $ids)
+                ->update([
+                    $column => $values[0]
+                ]);
+
+            return;
+        }
+
         $this->keyCast = in_array($settings->keyType, ['int', 'integer']) ? '::integer' : '::text';
 
         $settings->dbConnection->update(
