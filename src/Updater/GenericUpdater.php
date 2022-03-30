@@ -7,15 +7,12 @@ use WF\Batch\Settings;
 
 final class GenericUpdater implements Updater
 {
+    use HandlesUniqueValueUpdates;
+
     public function performUpdate(Settings $settings, string $column, array $values, array $ids) : void
     {
-        if (1 === count($values)) {
-            $settings->dbConnection
-                ->table($settings->table)
-                ->whereIn($settings->keyName, $ids)
-                ->update([
-                    $column => $values[0]
-                ]);
+        if ($this->isAlwaysSameValue($values)) {
+            $this->updateUsingWhereInQuery($settings, $column, $ids, $values[0]);
 
             return;
         }
