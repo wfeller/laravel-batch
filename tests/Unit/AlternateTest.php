@@ -17,8 +17,7 @@ class AlternateTest extends TestCase
         ];
     }
 
-    /** @test */
-    public function values_are_correctly_alternated()
+    public function test_values_are_correctly_alternated()
     {
         $arrays = [
             [1, 5, 9],
@@ -32,8 +31,7 @@ class AlternateTest extends TestCase
         $this->assertEquals($expected, Alternate::arrays(...$arrays));
     }
 
-    /** @test */
-    public function throws_if_arrays_dont_have_the_same_number_of_items()
+    public function test_throws_if_arrays_dont_have_the_same_number_of_items()
     {
         $this->expectException(BatchException::class);
         Alternate::arrays([1], [2], [3], [4, 5], [6]);

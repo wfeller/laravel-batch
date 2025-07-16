@@ -18,22 +18,19 @@ use WF\Batch\Tests\Models\User;
 
 trait SaveTests
 {
-    /** @test */
-    public function updaters_must_implement_the_interface()
+    public function test_updaters_must_implement_the_interface()
     {
         $this->expectException(BatchException::class);
         SaveHandler::registerUpdater('mariadb', SaveHandler::class);
     }
 
-    /** @test */
-    public function throws_when_inserting_a_bad_model_instance()
+    public function test_throws_when_inserting_a_bad_model_instance()
     {
         $this->expectException(BatchException::class);
         Car::batchSave([new User]);
     }
 
-    /** @test */
-    public function it_fires_model_events_when_saving()
+    public function test_it_fires_model_events_when_saving()
     {
         $existingModel = new TestModel;
         $existingModel->save();
@@ -63,8 +60,7 @@ trait SaveTests
         }
     }
 
-    /** @test */
-    public function it_fires_custom_save_model_events()
+    public function test_it_fires_custom_save_model_events()
     {
         $existingModel = new ModelWithCustomEvents();
         $existingModel->save();
@@ -92,8 +88,7 @@ trait SaveTests
         }
     }
 
-    /** @test */
-    public function it_doesnt_fire_events_if_no_saving_listeners()
+    public function test_it_doesnt_fire_events_if_no_saving_listeners()
     {
         $existingModel = new TestModel;
         $existingModel->save();
@@ -112,8 +107,7 @@ trait SaveTests
         }
     }
 
-    /** @test */
-    public function it_doesnt_fires_custom_save_model_events_if_no_listeners()
+    public function test_it_doesnt_fires_custom_save_model_events_if_no_listeners()
     {
         $existingModel = new ModelWithCustomEvents();
         $existingModel->save();
@@ -130,8 +124,7 @@ trait SaveTests
         }
     }
 
-    /** @test */
-    public function can_insert_models_with_different_array_keys_but_same_number_of_keys()
+    public function test_can_insert_models_with_different_array_keys_but_same_number_of_keys()
     {
         $companyOne = [
             'id' => 1,
@@ -156,8 +149,7 @@ trait SaveTests
         $this->assertEquals($companyTwo, Company::query()->find(2)->only(array_keys($companyTwo)));
     }
 
-    /** @test */
-    public function it_perform_the_save_without_calling_now_to_perform_the_save()
+    public function test_it_perform_the_save_without_calling_now_to_perform_the_save()
     {
         $company = [
             'id' => 1,
@@ -173,8 +165,7 @@ trait SaveTests
         $this->assertEquals($company, Company::query()->find(1)->only(array_keys($company)));
     }
 
-    /** @test */
-    public function model_properties_are_correctly_updated_on_save()
+    public function test_model_properties_are_correctly_updated_on_save()
     {
         $c = new Car($this->newAttributes());
 
@@ -196,8 +187,7 @@ trait SaveTests
         $this->assertFalse($d->wasRecentlyCreated);
     }
 
-    /** @test */
-    public function models_can_be_created_from_arrays()
+    public function test_models_can_be_created_from_arrays()
     {
         Car::batchSave([$this->newAttributes()]);
 
@@ -222,8 +212,7 @@ trait SaveTests
         $this->assertEquals($this->carAttributes(), $this->formatCar($car));
     }
 
-    /** @test */
-    public function models_can_be_created_from_iterables()
+    public function test_models_can_be_created_from_iterables()
     {
         Car::batchSave([$this->newAttributes()]);
 
@@ -248,8 +237,7 @@ trait SaveTests
         $this->assertEquals($this->carAttributes(), $this->formatCar($car));
     }
 
-    /** @test */
-    public function models_can_be_created_from_new_models()
+    public function test_models_can_be_created_from_new_models()
     {
         Car::batchSave([new Car($this->newAttributes())]);
         $this->assertEquals(1, Car::query()->count());
@@ -269,8 +257,7 @@ trait SaveTests
         $this->assertEquals($this->carAttributes(), $this->formatCar($car));
     }
 
-    /** @test */
-    public function models_can_be_updated()
+    public function test_models_can_be_updated()
     {
         $count = 0;
         while ($count < 10) {
@@ -291,8 +278,7 @@ trait SaveTests
         $this->assertEquals(12, Car::query()->count());
     }
 
-    /** @test */
-    public function models_can_be_created_from_arrays_in_queue()
+    public function test_models_can_be_created_from_arrays_in_queue()
     {
         Queue::fake();
 
@@ -306,8 +292,7 @@ trait SaveTests
         });
     }
 
-    /** @test */
-    public function it_can_batch_models_that_dont_use_the_batchable_trait()
+    public function test_it_can_batch_models_that_dont_use_the_batchable_trait()
     {
         $this->assertCount(0, ModelWithoutBatchableTrait::all());
 
@@ -320,8 +305,7 @@ trait SaveTests
         $this->assertCount(3, ModelWithoutBatchableTrait::all());
     }
 
-    /** @test */
-    public function it_syncs_original_after_save()
+    public function test_it_syncs_original_after_save()
     {
         $companyAttributes = [
             'id' => 1,
@@ -346,8 +330,7 @@ trait SaveTests
         $this->assertFalse($company->isDirty());
     }
 
-    /** @test */
-    public function it_syncs_changes_after_update()
+    public function test_it_syncs_changes_after_update()
     {
         $companyAttributes = [
             'id' => 1,
@@ -370,8 +353,7 @@ trait SaveTests
         $this->assertSame(['name' => 'two'], $company->getChanges());
     }
 
-    /** @test */
-    public function it_doesnt_perform_update_on_clean_models()
+    public function test_it_doesnt_perform_update_on_clean_models()
     {
         $companyAttributes = [
             'id' => 1,
@@ -468,7 +450,6 @@ trait SaveTests
                 : '2019-01-01 01:00:00',
             'tiny_integer' => true,
             'unsigned_big_integer' => 1,
-            'unsigned_decimal' => 1.20,
             'unsigned_integer' => 1,
             'unsigned_medium_integer' => 1,
             'unsigned_small_integer' => 1,
@@ -522,7 +503,6 @@ trait SaveTests
                 : '2019-01-02 01:00:00',
             'tiny_integer' => false,
             'unsigned_big_integer' => 2,
-            'unsigned_decimal' => 1.21,
             'unsigned_integer' => 2,
             'unsigned_medium_integer' => 2,
             'unsigned_small_integer' => 2,

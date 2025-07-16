@@ -48,7 +48,6 @@ class Car extends Model
         'tiny_integer' => 'boolean',
         'unsigned_integer' => 'integer',
         'unsigned_big_integer' => 'integer',
-        'unsigned_decimal' => 'decimal:2',
         'unsigned_medium_integer' => 'integer',
         'unsigned_small_integer' => 'integer',
         'unsigned_tiny_integer' => 'boolean',

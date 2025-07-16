@@ -110,7 +110,6 @@ abstract class TestCase extends BaseTestCase
             $table->timestamps();
             $table->tinyInteger('tiny_integer');
             $table->unsignedBigInteger('unsigned_big_integer');
-            $table->unsignedDecimal('unsigned_decimal');
             $table->unsignedInteger('unsigned_integer');
             $table->unsignedMediumInteger('unsigned_medium_integer');
             $table->unsignedSmallInteger('unsigned_small_integer');
@@ -123,7 +122,7 @@ abstract class TestCase extends BaseTestCase
     protected static function newDate() : Carbon
     {
         if (empty(static::$timezone)) {
-            static::$timezone = system('date +%Z');
+            static::$timezone = 'UTC';
         }
 
         return Carbon::parse('2019-01-01 01:00:00', static::$timezone);

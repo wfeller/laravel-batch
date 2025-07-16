@@ -15,21 +15,18 @@ use WF\Batch\Tests\Models\User;
 
 trait DeleteTests
 {
-    /** @test */
-    public function inexistant_ids_dont_get_deleted()
+    public function test_inexistant_ids_dont_get_deleted()
     {
         $this->assertCount(0, Company::newBatch([1111, 2222, 3333, 4444])->delete()->now());
     }
 
-    /** @test */
-    public function it_deletes_models_by_id()
+    public function test_it_deletes_models_by_id()
     {
         $c = $this->createDeletableCompany();
         $this->assertEquals([$c->getKey()], Company::newBatch([$c->getKey()])->delete()->now());
     }
 
-    /** @test */
-    public function it_fires_model_events_when_deleting()
+    public function test_it_fires_model_events_when_deleting()
     {
         $existingModel = new TestModel;
         $existingModel->save();
@@ -50,8 +47,7 @@ trait DeleteTests
         $events->assertNotDispatched("eloquent.{$notListeningTo}: ".TestModel::class);
     }
 
-    /** @test */
-    public function it_fires_custom_delete_model_events()
+    public function test_it_fires_custom_delete_model_events()
     {
         $existingModel = new ModelWithCustomEvents();
         $existingModel->save();
@@ -77,8 +73,7 @@ trait DeleteTests
         }
     }
 
-    /** @test */
-    public function it_doesnt_fire_events_if_no_deleting_listeners()
+    public function test_it_doesnt_fire_events_if_no_deleting_listeners()
     {
         $existingModel = new TestModel;
         $existingModel->save();
@@ -95,8 +90,7 @@ trait DeleteTests
         }
     }
 
-    /** @test */
-    public function it_doesnt_fires_custom_deleting_model_events_if_no_listeners()
+    public function test_it_doesnt_fires_custom_deleting_model_events_if_no_listeners()
     {
         $existingModel = new ModelWithCustomEvents();
         $existingModel->save();
@@ -111,8 +105,7 @@ trait DeleteTests
         }
     }
 
-    /** @test */
-    public function it_deletes_models_without_calling_now_to_perform_the_deletion()
+    public function test_it_deletes_models_without_calling_now_to_perform_the_deletion()
     {
         $c = $this->createDeletableCompany();
 
@@ -121,8 +114,7 @@ trait DeleteTests
         $this->assertSame(0, Company::query()->whereKey($c->getKey())->count());
     }
 
-    /** @test */
-    public function it_deletes_model_instances()
+    public function test_it_deletes_model_instances()
     {
         $one = $this->createDeletableCompany();
         $two = $this->createDeletableCompany();
@@ -141,21 +133,18 @@ trait DeleteTests
         $this->assertFalse($two->batchDeleting);
     }
 
-    /** @test */
-    public function it_ignores_new_model_instances()
+    public function test_it_ignores_new_model_instances()
     {
         $this->assertCount(0, Company::newBatch([new Company, new Company])->delete()->now());
     }
 
-    /** @test */
-    public function it_throws_when_deleting_different_model_classes()
+    public function test_it_throws_when_deleting_different_model_classes()
     {
         $this->expectException(BatchException::class);
         Company::newBatch([new User])->delete()->now();
     }
 
-    /** @test */
-    public function models_can_be_deleted_in_queue()
+    public function test_models_can_be_deleted_in_queue()
     {
         Queue::fake();
 
