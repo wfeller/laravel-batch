@@ -117,6 +117,10 @@ final class SaveHandler extends AbstractHandler
 
             $dirty = $model->isDirty();
 
+            if (! $model->exists && $model->usesUniqueIds()) {
+                $model->setUniqueIds();
+            }
+
             if (! $this->firePreInsertModelEvents($model, $dirty)) {
                 continue;
             }
