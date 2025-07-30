@@ -17,6 +17,7 @@ final class PostgresUpdater implements Updater
         'bigint'        => '::integer',
         'decimal'       => '::float',
         'float'         => '::float',
+        'numeric'       => '::float',
         'boolean'       => '::boolean',
         'uuid'          => '::uuid',
         'guid'          => '::uuid',
