@@ -16,14 +16,14 @@ trait Batchable
      * @param  integer  $batchSize
      * @return array    The ids that were just saved (if available).
      */
-    public static function batchSave(iterable $models, int $batchSize = null) : array
+    public static function batchSave(iterable $models, ?int $batchSize = null) : array
     {
         return static::newBatch($models)
             ->batchSize($batchSize ?? Batch::getDefaultBatchSize())
             ->save()->now();
     }
 
-    public static function batchSaveQueue(iterable $models, int $batchSize = null, string $queue = null) : void
+    public static function batchSaveQueue(iterable $models, ?int $batchSize = null, ?string $queue = null) : void
     {
         static::newBatch($models)
             ->batchSize($batchSize ?? Batch::getDefaultBatchSize())
@@ -35,14 +35,14 @@ trait Batchable
      * @param  integer  $batchSize
      * @return array    The ids of the models that were deleted.
      */
-    public static function batchDelete(iterable $models, int $batchSize = null) : array
+    public static function batchDelete(iterable $models, ?int $batchSize = null) : array
     {
         return static::newBatch($models)
             ->batchSize($batchSize ?? Batch::getDefaultBatchSize())
             ->delete()->now();
     }
 
-    public static function batchDeleteQueue(iterable $models, int $batchSize = null, string $queue = null) : void
+    public static function batchDeleteQueue(iterable $models, ?int $batchSize = null, ?string $queue = null) : void
     {
         static::newBatch($models)
             ->batchSize($batchSize ?? Batch::getDefaultBatchSize())
