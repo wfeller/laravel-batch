@@ -18,13 +18,14 @@ final class SaveHandler extends AbstractHandler
 
     /**
      * Strategy-pattern updaters: each database driver has its own updater
-     * class that generates the appropriate SQL syntax. MySQL and SQLite
-     * both use backtick quoting; PostgreSQL uses double-quote quoting
-     * and requires explicit type casts.
+     * class that generates the appropriate SQL syntax. MySQL, MariaDB,
+     * and SQLite all use backtick quoting; PostgreSQL uses double-quote
+     * quoting and requires explicit type casts.
      */
     private static array $updaters = [
         'pgsql' => Updater\PostgresUpdater::class,
         'mysql' => Updater\BacktickUpdater::class,
+        'mariadb' => Updater\BacktickUpdater::class,
         'sqlite' => Updater\BacktickUpdater::class,
     ];
 
@@ -82,7 +83,7 @@ final class SaveHandler extends AbstractHandler
                 $ids[] = $id;
             }
 
-            $values[implode('', array_keys($item))][] = $item;
+            $values[implode('|', array_keys($item))][] = $item;
         }
 
         foreach ($values as $insert) {

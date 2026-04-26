@@ -230,6 +230,10 @@ Run the test suite:
 composer test
 ```
 
+## Limitations
+
+- **Auto-increment IDs are not returned after batch insert.** `batchSave()` returns only IDs that were explicitly provided (e.g. UUID models). For auto-increment models, newly inserted rows do not have their database-assigned IDs populated on the model instance or included in the return value. Use UUID models if you need IDs immediately after batch insert.
+
 ## Changelog
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
