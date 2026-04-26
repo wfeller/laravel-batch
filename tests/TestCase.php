@@ -9,6 +9,8 @@ use Orchestra\Testbench\TestCase as BaseTestCase;
 use WF\Batch\Tests\Models\Car;
 use WF\Batch\Tests\Models\Company;
 use WF\Batch\Tests\Models\ModelWithoutBatchableTrait;
+use WF\Batch\Tests\Models\SoftDeletableCompany;
+use WF\Batch\Tests\Models\UuidCompany;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -116,6 +118,27 @@ abstract class TestCase extends BaseTestCase
             $table->unsignedTinyInteger('unsigned_tiny_integer');
             $table->uuid('uuid');
             $table->year('year');
+        });
+
+        Schema::dropIfExists((new SoftDeletableCompany)->getTable());
+        Schema::create((new SoftDeletableCompany)->getTable(), function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name');
+            $table->string('address');
+            $table->string('city');
+            $table->string('country_code');
+            $table->softDeletes();
+            $table->timestamps();
+        });
+
+        Schema::dropIfExists((new UuidCompany)->getTable());
+        Schema::create((new UuidCompany)->getTable(), function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->string('name');
+            $table->string('address');
+            $table->string('city');
+            $table->string('country_code');
+            $table->timestamps();
         });
     }
 

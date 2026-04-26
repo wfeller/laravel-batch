@@ -269,7 +269,7 @@ trait SaveTests
         $car = Car::query()->create($this->newAttributes());
         $car->forceFill($this->updateAttributes());
         Car::batchSave([$car, $first, $this->newAttributes()]);
-        $this->assertTrue($car->batchSaving);
+        $this->assertFalse($car->batchSaving);
         $this->assertFalse($car->batchDeleting);
         $car->wasRecentlyCreated = false;
         $first->wasRecentlyCreated = false;
@@ -351,6 +351,76 @@ trait SaveTests
 
         $this->assertSame('two', $company->name);
         $this->assertSame(['name' => 'two'], $company->getChanges());
+    }
+
+    public function test_saving_event_returning_false_skips_model()
+    {
+        Company::saving(fn () => false);
+
+        Batch::of(Company::class, [
+            ['name' => 'one', 'address' => 'a', 'city' => 'b', 'country_code' => 'c'],
+            ['name' => 'two', 'address' => 'd', 'city' => 'e', 'country_code' => 'f'],
+        ])->save()->now();
+
+        $this->assertEquals(0, Company::query()->count());
+    }
+
+    public function test_creating_event_returning_false_skips_new_model()
+    {
+        $existing = Company::query()->create(['name' => 'existing', 'address' => 'a', 'city' => 'b', 'country_code' => 'c']);
+        $existing->name = 'updated';
+
+        Company::creating(fn () => false);
+
+        Batch::of(Company::class, [
+            new Company(['name' => 'new', 'address' => 'a', 'city' => 'b', 'country_code' => 'c']),
+            $existing,
+        ])->save()->now();
+
+        $this->assertEquals(1, Company::query()->count());
+        $this->assertEquals('updated', Company::query()->first()->name);
+    }
+
+    public function test_updating_event_returning_false_skips_update()
+    {
+        $company = Company::query()->create(['name' => 'original', 'address' => 'a', 'city' => 'b', 'country_code' => 'c']);
+        $company->name = 'should_not_update';
+
+        Company::updating(fn () => false);
+
+        Batch::of(Company::class, [$company])->save()->now();
+
+        $this->assertEquals('original', Company::query()->first()->name);
+    }
+
+    public function test_batch_save_respects_chunk_size()
+    {
+        $models = [];
+        for ($i = 0; $i < 5; $i++) {
+            $models[] = ['name' => "company_{$i}", 'address' => 'a', 'city' => 'b', 'country_code' => 'c'];
+        }
+
+        Batch::of(Company::class, $models)->batchSize(2)->save()->now();
+
+        $this->assertEquals(5, Company::query()->count());
+    }
+
+    public function test_batch_save_updates_across_chunks()
+    {
+        $companies = [];
+        for ($i = 0; $i < 3; $i++) {
+            $companies[] = Company::query()->create(['name' => "original_{$i}", 'address' => 'a', 'city' => 'b', 'country_code' => 'c']);
+        }
+
+        foreach ($companies as $company) {
+            $company->name = 'updated';
+        }
+
+        Batch::of(Company::class, $companies)->batchSize(1)->save()->now();
+
+        foreach ($companies as $company) {
+            $this->assertEquals('updated', $company->fresh()->name);
+        }
     }
 
     public function test_it_doesnt_perform_update_on_clean_models()

@@ -46,6 +46,10 @@ final class PostgresUpdater implements Updater
             return;
         }
 
+        /**
+         * The key column also needs a cast in the VALUES join condition.
+         * Integer keys get ::integer; everything else (UUID, string) gets ::text.
+         */
         $this->keyCast = in_array($settings->keyType, ['int', 'integer']) ? '::integer' : '::text';
 
         $settings->dbConnection->update(
@@ -63,6 +67,12 @@ final class PostgresUpdater implements Updater
                 where (help_c.column_id){$this->keyCast} = t.\"{$settings->keyName}\"{$this->keyCast}";
     }
 
+    /**
+     * PostgreSQL's UPDATE ... FROM (VALUES ...) requires explicit type casts
+     * because literal values in a VALUES list are typed as text by default.
+     * Without casts, comparing text to an integer PK column would fail.
+     * We look up each column's DB type to determine the appropriate cast.
+     */
     private function castTypeForColumn(Settings $settings, string $column) : string
     {
         if (! isset(self::$castTypes[$settings->table][$column])) {

@@ -80,6 +80,10 @@ final class Batch
         return new DeleteHandler($this);
     }
 
+    /**
+     * Only validate Model instances — arrays and scalars are allowed through
+     * and will be handled later by SaveHandler/DeleteHandler.
+     */
     private function verifyModels() : void
     {
         foreach ($this->models as $model) {

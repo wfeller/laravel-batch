@@ -1,22 +1,15 @@
 # Laravel Batch
-## Save and update your eloquent models in batches
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/wfeller/laravel-batch.svg?style=flat-square)](https://packagist.org/packages/wfeller/laravel-batch)
 [![Total Downloads](https://img.shields.io/packagist/dt/wfeller/laravel-batch.svg?style=flat-square)](https://packagist.org/packages/wfeller/laravel-batch)
 [![Plant Tree](https://img.shields.io/badge/dynamic/json?color=brightgreen&label=Plant%20Tree&query=%24.total&url=https%3A%2F%2Fpublic.offset.earth%2Fusers%2Ftreeware%2Ftrees)](https://plant.treeware.earth/wfeller/laravel-batch)
 [![Buy us a tree](https://img.shields.io/badge/Treeware-%F0%9F%8C%B3-lightgreen?style=for-the-badge)](https://plant.treeware.earth/wfeller/laravel-batch)
 
-This package allows you to save and update models in batch, meaning you can save or
-update many models at the same time, and still fire your events as single saves or
-updates do.
+Save and update your Eloquent models in batches while still firing model events.
 
-## Licence
+## Introduction
 
-This package is [Treeware](https://treeware.earth). If you use it in production, then we ask that you [**buy the world a tree**](https://plant.treeware.earth/wfeller/laravel-batch) to thank us for our work. By contributing to the Treeware forest you’ll be creating employment for local families and restoring wildlife habitats.
-
-You can buy trees here [offset.earth/treeware](https://plant.treeware.earth/{vendor}/{package})
-
-Read more about Treeware at [treeware.earth](http://treeware.earth)
+This package allows you to efficiently save, update, and delete many Eloquent models at once while maintaining Laravel's standard model event system. Unlike Laravel's native `insert()` method, this package fires all the normal model events (`saving`, `saved`, `creating`, `created`, `updating`, `updated`, `deleting`, `deleted`).
 
 ## Installation
 
@@ -26,102 +19,218 @@ You can install the package via composer:
 composer require wfeller/laravel-batch
 ```
 
-## Usage
+## Quick Start
 
-### Creating and updating models
-``` php
-use App\Car;
+```php
+use App\Models\User;
+use WF\Batch\Batch;
+
+// Save multiple models at once
+$users = [
+    ['name' => 'John', 'email' => 'john@example.com'],
+    ['name' => 'Jane', 'email' => 'jane@example.com'],
+    $existingUser // existing model instance
+];
+
+$userIds = Batch::of(User::class, $users)->save()->now();
+```
+
+## Core Features
+
+### 1. Batch Saving Models
+
+Save multiple models with a single operation:
+
+```php
+use App\Models\Car;
 use WF\Batch\Batch;
 
 $cars = [
     ['brand' => 'Audi', 'model' => 'A6'],
     ['brand' => 'Ford', 'model' => 'Mustang'],
-    $myCar // an existing or new car instance
+    $existingCar // existing model instance
 ];
 
+// Save immediately
 $carIds = Batch::of(Car::class, $cars)->save()->now();
 
-// You can queue the batch
-Batch::of(Car::class, $cars)->save()->dispatch();
-Batch::of(Car::class, $cars)->save()->onQueue('other-queue')->dispatch();
-
-// You can set the batch size based on your needs
-Batch::of(Car::class, $cars)->batchSize(1000)->save()->now();
+// Set custom batch size
+$carIds = Batch::of(Car::class, $cars)->batchSize(100)->save()->now();
 ```
 
-For the updates, there will be one DB query per updated column. For the saves, there will
-only be one query per set of columns.
+### 2. Batch Updating Models
 
-### Deleting Models
+Update multiple existing models:
 
-``` php
-use App\Car;
+```php
+use App\Models\User;
 use WF\Batch\Batch;
 
-$cars = [
-    1, // a car id
-    $car, // a car instance
-    ... // many more cars
+$users = [
+    ['id' => 1, 'name' => 'Updated John'],
+    ['id' => 2, 'name' => 'Updated Jane'],
+    $userInstance // existing model with changes
 ];
 
-$deletedIds = Batch::of(Car::class, $cars)->delete()->now();
-Batch::of(Car::class, $cars)->delete()->dispatch();
-Batch::of(Car::class, $cars)->delete()->onQueue('other-queue')->dispatch();
+$updatedIds = Batch::of(User::class, $users)->save()->now();
 ```
 
-You'll have 1 query to delete your models. If you're passing model IDs, the models will be loaded from the DB to fire the deletion model events.
+### 3. Batch Deleting Models
 
-### If you want to create batches directly from your models:
-``` php
-class Car extends \Illuminate\Database\Eloquent\Model
+Delete multiple models efficiently:
+
+```php
+use App\Models\Car;
+use WF\Batch\Batch;
+
+// Delete by IDs
+$carIds = [1, 2, 3, 5, 8];
+$deletedIds = Batch::of(Car::class, $carIds)->delete()->now();
+
+// Delete by model instances
+$cars = Car::find([1, 2, 3]);
+$deletedIds = Batch::of(Car::class, $cars)->delete()->now();
+
+// Mixed approach
+$mixed = [1, $carInstance, 3, $anotherCar];
+$deletedIds = Batch::of(Car::class, $mixed)->delete()->now();
+```
+
+### 4. Queue Support
+
+Process batch operations in the background:
+
+```php
+use App\Models\User;
+use WF\Batch\Batch;
+
+$users = [
+    ['name' => 'John', 'email' => 'john@example.com'],
+    ['name' => 'Jane', 'email' => 'jane@example.com']
+];
+
+// Dispatch to default queue
+Batch::of(User::class, $users)->save()->dispatch();
+
+// Dispatch to specific queue
+Batch::of(User::class, $users)->save()->onQueue('high-priority')->dispatch();
+```
+
+### 5. Model Trait Integration
+
+Add batch functionality directly to your models:
+
+```php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use WF\Batch\Traits\Batchable;
+
+class Car extends Model
 {
-    use \WF\Batch\Traits\Batchable;
+    use Batchable;
     
     // ...
 }
 
-// This allows you to call
-Car::newBatch($cars)->save()->now();
-// which is the same as
-Batch::of(Car::class, $cars)->save()->now();
+// Now you can use batch operations directly on the model
+$cars = [
+    ['brand' => 'Audi', 'model' => 'A6'],
+    ['brand' => 'Ford', 'model' => 'Mustang']
+];
+
+// These are equivalent
+$carIds = Car::newBatch($cars)->save()->now();
+$carIds = Car::batchSave($cars);
+
+// For deletion
+Car::batchDelete([1, 2, 3]);
 ```
 
-### Benchmarks
+### 6. Batch Size Configuration
 
-**These benchmarks are not accurate, but they give some kind of rough idea of the potential performance improvement or usefulness of this package.**
+Control how many models are processed in each batch:
 
-The results vary a lot based on the DB driver, but basically that's what you get:
-1. Laravel's bulk insert (this one doesn't fire model events though, the others do)
-2. This package's Batch Saving (1.3 to 3 times slower than #1)
-3. Laravel foreach create (8 to 50 times slower than #1)
+```php
+use App\Models\User;
+use WF\Batch\Batch;
 
+$users = collect()->range(1, 10000)->map(fn($i) => [
+    'name' => "User $i",
+    'email' => "user$i@example.com"
+]);
 
-* Laravel's bulk insert is the fastest, but doesn't fire model events.
-``` php
+// Process in batches of 500 (default)
+Batch::of(User::class, $users)->save()->now();
+
+// Process in batches of 1000
+Batch::of(User::class, $users)->batchSize(1000)->save()->now();
+
+// Set global default batch size
+Batch::setDefaultBatchSize(1000);
+```
+
+## Performance Comparison
+
+| Method | Speed | Model Events |
+|--------|-------|--------------|
+| Laravel's `insert()` | Fastest | No |
+| Laravel Batch | 1.3-3x slower than `insert()` | Yes |
+| Individual `create()` calls | 8-50x slower than `insert()` | Yes |
+
+```php
+// Fastest but no events
 User::insert([$userA, $userB, $userC]);
-```
 
-* This package's Batch Saving takes up to 3 times as long as Laravel's bulk insert, but your model events get fired
-``` php
+// Balanced: good performance with events
 Batch::of(User::class, [$userA, $userB, $userC])->save()->now();
-```
 
-* 'Foreach create' is the slowest, taking at least 3 times longer than Batch Saving
-``` php
-$users = [$userA, $userB, $userC];
-foreach ($users as $user) 
-{
+// Slowest: individual operations
+foreach ([$userA, $userB, $userC] as $user) {
     User::create($user);
 }
 ```
 
-### Testing
+## Event Handling
 
-``` bash
+All standard Laravel model events are fired during batch operations:
+
+```php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class User extends Model
+{
+    protected static function booted()
+    {
+        static::creating(function (User $user) {
+            // Called for each new user in batch
+            $user->created_by = auth()->id();
+        });
+        
+        static::updating(function (User $user) {
+            // Called for each updated user in batch
+            $user->updated_by = auth()->id();
+        });
+        
+        static::deleting(function (User $user) {
+            // Called for each user being deleted in batch
+            $user->deleted_by = auth()->id();
+        });
+    }
+}
+```
+
+## Testing
+
+Run the test suite:
+
+```bash
 composer test
 ```
 
-### Changelog
+## Changelog
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
 
@@ -129,9 +238,17 @@ Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed re
 
 Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
 
-### Security
+## Security
 
 If you discover any security related issues, please email me instead of using the issue tracker.
+
+## License
+
+This package is [Treeware](https://treeware.earth). If you use it in production, then we ask that you [**buy the world a tree**](https://plant.treeware.earth/wfeller/laravel-batch) to thank us for our work. By contributing to the Treeware forest you'll be creating employment for local families and restoring wildlife habitats.
+
+You can buy trees here [offset.earth/treeware](https://plant.treeware.earth/{vendor}/{package})
+
+Read more about Treeware at [treeware.earth](http://treeware.earth)
 
 ## Credits
 

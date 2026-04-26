@@ -3,6 +3,7 @@
 namespace WF\Batch;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use WF\Batch\Events\BatchDeleted;
 use WF\Batch\Events\BatchDeleting;
 
@@ -48,13 +49,25 @@ final class DeleteHandler extends AbstractHandler
         return $ids;
     }
 
+    /**
+     * We use newQueryWithoutScopes() so that global scopes (e.g. tenant
+     * scope) don't prevent deleting the target rows. For soft-deletable
+     * models, we explicitly set deleted_at via UPDATE instead of relying
+     * on SoftDeletingScope (which was stripped), and add a whereNull
+     * clause so already-deleted rows are not re-timestamped.
+     */
     private function performDelete(array $keys) : void
     {
+        $query = $this->settings->model->newQueryWithoutScopes()->whereKey($keys);
+
         if ($this->forceDelete) {
-            $this->settings->model->newQueryWithoutScopes()->whereKey($keys)->forceDelete();
+            $query->forceDelete();
+        } elseif (isset(class_uses_recursive($this->settings->model)[SoftDeletes::class])) {
+            $query
+                ->whereNull($this->settings->model->getDeletedAtColumn())
+                ->update([$this->settings->model->getDeletedAtColumn() => $this->settings->now]);
         } else {
-            // Soft deleting is taken care of in SoftDeletingScope
-            $this->settings->model->newQueryWithoutScopes()->whereKey($keys)->delete();
+            $query->delete();
         }
     }
 
@@ -73,6 +86,12 @@ final class DeleteHandler extends AbstractHandler
         return $keys;
     }
 
+    /**
+     * When no deletion events are registered, we can skip fetching model
+     * instances from the database entirely — we only need their keys.
+     * This is a performance optimization: extractAndFilterModelKeys
+     * returns raw integer/string IDs instead of Model instances.
+     */
     private function prepareModels(array $models) : array
     {
         $this->removeNotExistingModels($models);
@@ -128,6 +147,12 @@ final class DeleteHandler extends AbstractHandler
         return $this->settings->model->newQueryWithoutScopes()->whereKey($keys)->pluck($this->settings->keyName)->all();
     }
 
+    /**
+     * When deletion events exist, we need actual Model instances to fire
+     * events on. Raw IDs are refreshed from the database; existing Model
+     * instances are kept as-is. When no events exist, we return only keys
+     * (from extractAndFilterModelKeys) and skip the DB refresh entirely.
+     */
     private function refreshModels(array $models) : array
     {
         $missing = [];
@@ -148,16 +173,17 @@ final class DeleteHandler extends AbstractHandler
 
     private function firePostDeleteEvents(array $models) : void
     {
-        if ($this->settings->dispatchableEvents['deleted']
-            || ($this->forceDelete && $this->settings->dispatchableEvents['forceDeleted'])) {
-            foreach ($models as $model) {
-                if ($this->settings->dispatchableEvents['deleted']) {
-                    $this->fireModelEvent($model, 'deleted', false);
-                }
+        foreach ($models as $model) {
+            if ($this->settings->dispatchableEvents['deleted']) {
+                $this->fireModelEvent($model, 'deleted', false);
+            }
 
-                if ($this->forceDelete && $this->settings->dispatchableEvents['forceDeleted']) {
-                    $this->fireModelEvent($model, 'forceDeleted', false);
-                }
+            if ($this->forceDelete && $this->settings->dispatchableEvents['forceDeleted']) {
+                $this->fireModelEvent($model, 'forceDeleted', false);
+            }
+
+            if ($this->settings->remembersBatchState && $model instanceof Model) {
+                $model->finishBatchDelete();
             }
         }
     }

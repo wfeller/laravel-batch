@@ -5,7 +5,7 @@ namespace WF\Batch\Updater;
 use WF\Batch\Helpers\Alternate;
 use WF\Batch\Settings;
 
-final class GenericUpdater implements Updater
+final class BacktickUpdater implements Updater
 {
     use HandlesUniqueValueUpdates;
 
@@ -17,6 +17,10 @@ final class GenericUpdater implements Updater
             return;
         }
 
+        /**
+         * Bindings: Alternate::arrays interleaves [id1, val1, id2, val2, ...]
+         * for the CASE WHEN clauses, then $ids is appended for the WHERE IN.
+         */
         $settings->dbConnection->update(
             $this->sql($settings, $column, count($values)),
             array_merge(Alternate::arrays($ids, $values), $ids)

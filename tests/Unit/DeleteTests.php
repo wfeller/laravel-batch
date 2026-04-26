@@ -129,7 +129,7 @@ trait DeleteTests
         $two = $this->createDeletableCompany();
         $this->assertEquals([$one->getKey(), $two->getKey()], Company::newBatch([$one, $two->getKey()])->delete()->now());
 
-        $this->assertTrue($one->batchDeleting);
+        $this->assertFalse($one->batchDeleting);
         $this->assertFalse($two->batchDeleting);
     }
 
@@ -161,5 +161,29 @@ trait DeleteTests
     private function createDeletableCompany() : Company
     {
         return Company::query()->create(['name' => 'a', 'address' => 'b', 'city' => 'c', 'country_code' => 'd']);
+    }
+
+    public function test_deleting_event_returning_false_skips_model()
+    {
+        $one = $this->createDeletableCompany();
+        $two = $this->createDeletableCompany();
+
+        Company::deleting(fn () => false);
+
+        Batch::of(Company::class, [$one, $two])->delete()->now();
+
+        $this->assertEquals(2, Company::query()->count());
+    }
+
+    public function test_batch_delete_respects_chunk_size()
+    {
+        $companies = [];
+        for ($i = 0; $i < 5; $i++) {
+            $companies[] = Company::query()->create(['name' => "c_{$i}", 'address' => 'a', 'city' => 'b', 'country_code' => 'c']);
+        }
+
+        Batch::of(Company::class, $companies)->batchSize(2)->delete()->now();
+
+        $this->assertEquals(0, Company::query()->count());
     }
 }

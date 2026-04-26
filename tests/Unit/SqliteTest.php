@@ -6,7 +6,7 @@ use WF\Batch\Tests\TestCase;
 
 class SqliteTest extends TestCase
 {
-    use SaveTests, DeleteTests;
+    use SaveTests, DeleteTests, SoftDeleteTests, UuidTests;
 
     protected function databaseDriver() : array
     {

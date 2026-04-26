@@ -16,10 +16,16 @@ final class SaveHandler extends AbstractHandler
     private Settings $settings;
     private Updater\Updater $updater;
 
+    /**
+     * Strategy-pattern updaters: each database driver has its own updater
+     * class that generates the appropriate SQL syntax. MySQL and SQLite
+     * both use backtick quoting; PostgreSQL uses double-quote quoting
+     * and requires explicit type casts.
+     */
     private static array $updaters = [
         'pgsql' => Updater\PostgresUpdater::class,
-        'mysql' => Updater\GenericUpdater::class,
-        'sqlite' => Updater\GenericUpdater::class,
+        'mysql' => Updater\BacktickUpdater::class,
+        'sqlite' => Updater\BacktickUpdater::class,
     ];
 
     public static function registerUpdater(string $driver, string $class) : void
@@ -60,6 +66,12 @@ final class SaveHandler extends AbstractHandler
         $this->updater = app(self::$updaters[$driver]);
     }
 
+    /**
+     * Rows in a single INSERT must share the same column structure.
+     * We group items by their column signature (concatenated column names)
+     * so each group can be inserted in one query. This handles models that
+     * have different nullable columns present/absent.
+     */
     private function batchInsert(array $items) : array
     {
         $ids = [];
@@ -80,6 +92,11 @@ final class SaveHandler extends AbstractHandler
         return $ids;
     }
 
+    /**
+     * batchUpdate updates one column at a time across all models.
+     * This allows the updater to generate a single CASE/WHEN SQL
+     * statement per column instead of one query per model.
+     */
     private function batchUpdate(array $models) : array
     {
         foreach ($this->settings->getColumns() as $column) {
@@ -108,6 +125,11 @@ final class SaveHandler extends AbstractHandler
         return [$values, $ids];
     }
 
+    /**
+     * Models are split into two groups: new models to INSERT and
+     * existing dirty models to UPDATE. $finalModels tracks all models
+     * that passed pre-insert events, for firing post-save events.
+     */
     private function prepareBatches(array $modelsChunk) : array
     {
         [$createModels, $updateModels, $finalModels] = [[], [], []];
@@ -115,6 +137,11 @@ final class SaveHandler extends AbstractHandler
         foreach ($modelsChunk as $model) {
             $model = $model instanceof Model ? $model : $this->settings->model->newInstance()->forceFill($model);
 
+            /**
+             * isDirty() is checked before timestamps are set so we can
+             * distinguish "model exists but nothing changed" from "model
+             * exists with real changes" — only the latter goes to UPDATE.
+             */
             $dirty = $model->isDirty();
 
             if (! $model->exists && $model->usesUniqueIds()) {
@@ -141,6 +168,10 @@ final class SaveHandler extends AbstractHandler
                 $model->wasRecentlyCreated = true;
                 $createModels[] = $model->getAttributes();
             } elseif ($dirty) {
+                /**
+                 * getDirty() returns only changed attributes, so we append
+                 * the primary key so the updater knows which row to target.
+                 */
                 $updateModels[] = $model->getDirty() + [$this->settings->keyName => $model->getKey()];
             }
 
@@ -150,6 +181,12 @@ final class SaveHandler extends AbstractHandler
         return [$createModels, $updateModels, $finalModels];
     }
 
+    /**
+     * Pre-save events use halt mode (dispatcher::until): if any listener
+     * returns false, the model is skipped entirely — not inserted or updated.
+     * The saving event fires first; then either creating (new models) or
+     * updating (existing dirty models) fires depending on the model state.
+     */
     private function firePreInsertModelEvents(Model $model, bool $dirty) : bool
     {
         if ($this->settings->dispatchableEvents['saving']
@@ -174,6 +211,14 @@ final class SaveHandler extends AbstractHandler
         return true;
     }
 
+    /**
+     * Post-save events are non-halting (dispatcher::dispatch): all
+     * listeners run and their return values are ignored. We check
+     * isDirty() on updated models (not newly created ones) because
+     * only updated models should fire the "updated" event — and
+     * syncChanges() must be called before syncOriginal() so the
+     * model's $changes property is populated correctly.
+     */
     private function firePostInsertModelEvents(array $finalModels) : void
     {
         foreach ($finalModels as $model) {
@@ -196,6 +241,10 @@ final class SaveHandler extends AbstractHandler
             }
 
             $model->syncOriginal();
+
+            if ($this->settings->remembersBatchState) {
+                $model->finishBatchSave();
+            }
         }
     }
 }

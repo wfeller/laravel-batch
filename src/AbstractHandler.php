@@ -33,10 +33,21 @@ abstract class AbstractHandler implements ShouldQueue
         return $this->handle();
     }
 
+    /**
+     * If neither now() nor dispatch() was called, the batch executes
+     * automatically when the handler goes out of scope. This ensures
+     * batches are never silently dropped. Exceptions during destruction
+     * would cause a PHP fatal error, so we catch and defer the throw
+     * to a shutdown function instead.
+     */
     public function __destruct()
     {
         if (! $this->wasDispatched) {
-            $this->handle();
+            try {
+                $this->handle();
+            } catch (\Throwable $e) {
+                register_shutdown_function(static fn () => throw $e);
+            }
         }
     }
 

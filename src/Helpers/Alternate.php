@@ -7,11 +7,12 @@ use WF\Batch\Exceptions\BatchException;
 class Alternate
 {
     /**
-     * Flattens the arrays and alternates the values of each array given: Arr::alternate($first, $second, $third)
-     * will return [$first[0], $second[0], $third[0], $first[1], $second[1], $third[1], ...]
-     * All arrays must have the same size.
+     * Interleaves values from multiple arrays: Alternate::arrays([1,2], [10,20])
+     * returns [1, 10, 2, 20]. Used to build CASE WHEN bindings where each
+     * clause needs (id, value) pairs in sequence. All arrays must be the
+     * same size.
      *
-     * @param array[] $arrays
+     * @param  array[] $arrays
      * @return array
      */
     public static function arrays(array... $arrays) : array

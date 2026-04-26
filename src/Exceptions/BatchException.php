@@ -25,7 +25,7 @@ class BatchException extends RuntimeException
 
     public static function noRegisteredUpdater(string $driver) : self
     {
-        return new self("No registered updated for driver: '{$driver}'.");
+        return new self("No registered updater for driver: '{$driver}'.");
     }
 
     public static function invalidClass(string $expected, string $actual) : self

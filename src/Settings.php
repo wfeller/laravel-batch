@@ -28,6 +28,12 @@ final class Settings
     public Connection $dbConnection;
     public Dispatcher $dispatcher;
 
+    /**
+     * Eloquent only dispatches model events when listeners are registered.
+     * We pre-compute which events have listeners so we can skip firing
+     * events entirely for unobserved models — this avoids the overhead
+     * of instantiating Model instances for deletes when no one is listening.
+     */
     public array $dispatchableEvents = [];
     public array $events = [];
     public array $customEvents = [];
@@ -48,6 +54,11 @@ final class Settings
 
         $dispatchesEvents = $this->getDispatchesEvents();
 
+        /**
+         * A model can have both standard Eloquent events (eloquent.saving: ...)
+         * and custom events mapped via $dispatchesEvents. We track each
+         * independently so both paths are dispatched when both have listeners.
+         */
         foreach ($this->model->getObservableEvents() as $type) {
             $this->events[$type] = $this->dispatcher->hasListeners("eloquent.{$type}: {$this->class}");
             $this->customEvents[$type] = $this->customEventFor($type, $dispatchesEvents);
@@ -56,12 +67,13 @@ final class Settings
         }
     }
 
+    /**
+     * $dispatchesEvents is protected on Model, so we use reflection
+     * to read it. setAccessible() is unnecessary in PHP 8.1+.
+     */
     private function getDispatchesEvents() : array
     {
-        $reflectionProperty = new \ReflectionProperty($this->model, 'dispatchesEvents');
-        $reflectionProperty->setAccessible(true);
-
-        return $reflectionProperty->getValue($this->model);
+        return (new \ReflectionProperty($this->model, 'dispatchesEvents'))->getValue($this->model);
     }
 
     private function customEventFor(string $event, array $dispatchesEvents)
@@ -77,6 +89,11 @@ final class Settings
         return $dispatchesEvents[$event];
     }
 
+    /**
+     * Returns all columns except the primary key. These are the columns
+     * that batchUpdate iterates over to generate per-column UPDATE SQL.
+     * Cached statically per model class so schema is not queried repeatedly.
+     */
     public function getColumns() : array
     {
         if (! isset(self::$columns[$this->class])) {
