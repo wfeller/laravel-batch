@@ -100,6 +100,10 @@ final class SaveHandler extends AbstractHandler
      */
     private function batchUpdate(array $models) : array
     {
+        if ([] === $models) {
+            return [];
+        }
+
         foreach ($this->settings->getColumns() as $column) {
             $updated = array_filter($models, static fn ($model) : bool => array_key_exists($column, $model));
 

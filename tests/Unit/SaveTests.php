@@ -4,11 +4,13 @@ namespace WF\Batch\Tests\Unit;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use WF\Batch\Batch;
 use WF\Batch\Exceptions\BatchException;
 use WF\Batch\SaveHandler;
+use WF\Batch\Settings;
 use WF\Batch\Tests\Models\Car;
 use WF\Batch\Tests\Models\Company;
 use WF\Batch\Tests\Models\ModelWithCustomEvents;
@@ -451,6 +453,25 @@ trait SaveTests
         $events->assertNotDispatched('eloquent.updated: '.Company::class);
         $events->assertDispatchedTimes('eloquent.saving: '.Company::class, 1);
         $events->assertDispatchedTimes('eloquent.saved: '.Company::class, 1);
+    }
+
+    public function test_inserting_only_new_models_does_not_read_the_table_schema()
+    {
+        (new \ReflectionProperty(Settings::class, 'columns'))->setValue(null, []);
+
+        DB::enableQueryLog();
+
+        Company::batchSave([[
+            'name' => 'one',
+            'address' => '123 some street',
+            'city' => 'my city',
+            'country_code' => 'us',
+        ]]);
+
+        $this->assertSame(
+            ['insert'],
+            array_map(static fn (array $query) : string => strtolower(strtok($query['query'], ' ')), DB::getQueryLog())
+        );
     }
 
     protected function formatCar(Car $car) : array
